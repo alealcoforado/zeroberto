@@ -15,3 +15,5 @@ dict_classes_folha = {
 
 def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
+
+##
