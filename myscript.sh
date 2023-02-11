@@ -26,7 +26,7 @@ new_version=$major_version.$minor_version.$patch_version
 echo "new_version: "$new_version
 
 git add .  
-git commit -m "$desc"
+git commit -m "$desc" --quiet
 git push origin main
 echo $new_version >>versions.txt
 echo "Commited to github"
