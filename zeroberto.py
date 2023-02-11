@@ -10,6 +10,7 @@ def getPredictions(setfit_trainer):
       eval_dataset = setfit_trainer._apply_column_mapping(setfit_trainer.eval_dataset, setfit_trainer.column_mapping)
 
   x_test = eval_dataset["text"]
+  print("Running predictions on {} sentences.".format(len(x_test)))
   y_pred = setfit_trainer.model.predict(x_test)
   return y_pred
 
