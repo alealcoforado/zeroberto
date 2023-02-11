@@ -21,3 +21,6 @@ read -p "patch/major/minor: " commit_type
 
 git commit -m "$desc"
 git push origin main
+
+foo=1:2:3:4:5
+$ echo ${foo##*:}
