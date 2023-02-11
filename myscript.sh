@@ -16,5 +16,8 @@
 
 git add .  
 read -p "Commit description: " desc  
+read -p "patch/major/minor: " commit_type  
+
+
 git commit -m "$desc"
 git push origin main
