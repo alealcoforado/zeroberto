@@ -27,7 +27,7 @@ echo "new_version: "$new_version
 
 git add .  
 git commit -m "$desc" --quiet
-git push origin main
+git push origin main --quiet
 echo $new_version >>versions.txt
 echo "Commited to github"
 
