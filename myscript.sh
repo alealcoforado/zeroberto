@@ -14,7 +14,7 @@ major_version=${arrIN[0]}
 minor_version=${arrIN[1]}
 patch_version=${arrIN[2]}
 
-case $1 in 
+case $commit_type in 
 "major") let "major_version=major_version+1" "minor_version=0" "patch_version=0";;
 "minor") let "minor_version=minor_version+1" "patch_version=0";;
 "patch") let "patch_version=patch_version+1";;
