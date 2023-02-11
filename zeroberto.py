@@ -30,7 +30,7 @@ def runZeroShotPipeline(classifier,data,config):
                             hypothesis_template=config['template'], multi_label=False)
         preds.append(pred)
 
-        if config['zeroshot_method'] == "probability_threshold":
+        if config['method'] == "probability_threshold":
             top_prob = pred['scores'][0]
             top_label = pred['labels'][0]
 
@@ -42,15 +42,13 @@ def runZeroShotPipeline(classifier,data,config):
             if all(count >= config['top_n_goal'] for count in list(goal_count.values())):
                 break  ### stop loop if goal is met
 
-        if config['zeroshot_method'] == "top_n_goal":
+        if config['method'] == "top_n_goal":
             top_prob = pred['scores'][0]
             top_label = pred['labels'][0]
             if len(preds) % 50 == 0:
                 print("Preds:",len(preds)," - Total time:",round(time.time()-t0,2),"seconds")
-                print(goal_count)
 
-
-    print(len(preds))
+    print("Total Predictions:",len(preds))
     return preds
 
 def formatZeroShotResults(results):
