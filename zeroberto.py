@@ -18,30 +18,40 @@ def mapper(item_tuple):
   return dict(zip(item["labels"], item["scores"]))
 
 def runZeroShotPipeline(classifier,data,config):
-   # labels =  list(dict_classes_folha.values())
-   goal_count = dict(zip(config['labels'],np.zeros(len(config['labels']))))
-   print("# data:",len(data))
-   print(config)
-   preds = []
-   indexes = []
-   t0 = time.time()
-   for text in data:
-      pred = classifier(text, candidate_labels=config['labels'], 
-                           hypothesis_template=config['template'], multi_label=False)
-      preds.append(pred)
-      top_prob = pred['scores'][0]
-      # print(top_prob)
-      top_label = pred['labels'][0]
-      # print(top_label)
-      if (top_prob>=config['prob_goal']):
-         goal_count[top_label] += 1
-      if len(preds) % 50 == 0:
-         print("Preds:",len(preds)," - Total time:",round(time.time()-t0,2),"seconds")
-         print(goal_count)
-      if all(count >= config['top_n_goal'] for count in list(goal_count.values())):
-         break  ### stop loop if goal is met
-   print(len(preds))
-   return preds
+    # labels =  list(dict_classes_folha.values())
+    goal_count = dict(zip(config['labels'],np.zeros(len(config['labels']))))
+    print("# data:",len(data))
+    print(config)
+    preds = []
+    indexes = []
+    t0 = time.time()
+    for text in data:
+        pred = classifier(text, candidate_labels=config['labels'], 
+                            hypothesis_template=config['template'], multi_label=False)
+        preds.append(pred)
+
+        if config['zeroshot_method'] == "probability_threshold":
+            top_prob = pred['scores'][0]
+            top_label = pred['labels'][0]
+
+            if (top_prob>=config['prob_goal']):
+                goal_count[top_label] += 1
+            if len(preds) % 50 == 0:
+                print("Preds:",len(preds)," - Total time:",round(time.time()-t0,2),"seconds")
+                print(goal_count)
+            if all(count >= config['top_n_goal'] for count in list(goal_count.values())):
+                break  ### stop loop if goal is met
+
+        if config['zeroshot_method'] == "top_n_goal":
+            top_prob = pred['scores'][0]
+            top_label = pred['labels'][0]
+            if len(preds) % 50 == 0:
+                print("Preds:",len(preds)," - Total time:",round(time.time()-t0,2),"seconds")
+                print(goal_count)
+
+
+    print(len(preds))
+    return preds
 
 def formatZeroShotResults(results):
   df_results = pd.DataFrame(pd.Series(results).to_dict())
