@@ -79,7 +79,7 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
 
 #     ## keep true labels of the rest, for testing
     raw_data_final = evaluation_metrics.Encoder(raw_data_final,[new_class_col])
-    return raw_data_final
+    return raw_data_final, new_class_col
 
 def splitDataset(dataframe,config):
     if (split == "zeroshot"):
