@@ -10,16 +10,22 @@ from sentence_transformers import SentenceTransformer
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 class ZeroBERTo(nn.Module):
-  def __init__(self, classes_list):
+  def __init__(self, classes_list, hypothesis_template):
     super(ZeroBERTo, self).__init__()
     #self.text_splitter
-    self.embedding = SentenceTransformer('distiluse-base-multilingual-cased-v2', device=device)
-    self.queries = self.create_queries(classes_list)
+
+    self.embedding = SentenceTransformer('sentence-transformers/nli-roberta-base-v2', device=device)
+    self.queries = self.create_queries(classes_list,hypothesis_template)
     #self.cluster
     self.softmax = nn.Softmax(dim=1)
   
-  def create_queries(self, classes_list):
-    return self.embedding.encode(sentences=classes_list, convert_to_tensor=True, normalize_embeddings=True)
+  def create_queries(self, classes_list, hypothesis):
+
+    classes = []
+    for c in classes_list:
+        classes.append(hypothesis.format(c))
+
+    return self.embedding.encode(sentences=classes, convert_to_tensor=True, normalize_embeddings=True)
 
   def forward(self, x):
     #splitted_doc = self.text_splitter(x)
@@ -29,6 +35,20 @@ class ZeroBERTo(nn.Module):
     z = self.softmax(logits.unsqueeze(0))
     return z
 
+def runZeroberto(model,data,config):
+    preds = []
+    t0 = time.time()
+    for text in data:
+        preds.append(model(text).numpy()[0])
+
+        if len(preds) % 50 == 0:
+            t1 = time.time()-t0
+            eta = ((t1)/len(preds))*len(data)/60
+            print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( eta ,1),"minutes")
+    return preds
+
+# def predsToDataframe(preds):
+   
 
 def getPredictions(setfit_trainer):
   setfit_trainer._validate_column_mapping(setfit_trainer.eval_dataset)
