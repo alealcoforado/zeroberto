@@ -1,0 +1,32 @@
+prox passos
+1) testar modelo como está nos datasets benchmark (começar por AgNews)
+2) pesquisa + resumir papers do EMNLP de 0shot (e outros)
+3) definir experimentos
+4) testar similarity do sBERT (ver tempo de execução e se melhora acurácia)
+
+
+n) organizar código pra mandar o paper
+n+1) organizar pra submeter no hugging face
+m) 
+
+---estrutura paper---
+
+1) intro
+
+2) Related Work
+revisao do estado da arte 
+ja vamos usar umas ideias dos outros
+
+3) descrição do método
+a) seleção (sentence extraction + clusterizaçao?? + heurística??)
+b) rotulagem
+c) treinamento
+
+4) experimentos e resultados do modelo
+principal resultado do modelo
+
+5) e 6) tentar avaliar o papel de cada hiperparametro de cada fase 
+cada vez q roda o self training, oq acontece?...
+estudo de ablação + gráficos
+heatmaps
+

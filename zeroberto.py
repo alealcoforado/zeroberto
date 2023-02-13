@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import time
 
+
+
 def getPredictions(setfit_trainer):
   setfit_trainer._validate_column_mapping(setfit_trainer.eval_dataset)
   eval_dataset = setfit_trainer.eval_dataset
@@ -47,7 +49,8 @@ def runZeroShotPipeline(classifier,data,config):
             top_prob = pred['scores'][0]
             top_label = pred['labels'][0]
             if len(preds) % 50 == 0:
-                print("Preds:",len(preds)," - Total time:",round(time.time()-t0,2),"seconds")
+                t1 = time.time()-t0
+                print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( ((t1)/len(preds))*len(data)/60 ,1),"minutes")
 
     print("Total Predictions:",len(preds))
     return preds
