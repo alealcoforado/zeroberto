@@ -1,7 +1,33 @@
 import numpy as np
 import pandas as pd
 import time
+import torch
+import torch.nn as nn
+from sentence_transformers import SentenceTransformer
+# -*- coding: utf-8 -*-
+# !pip install sentence_transformers
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+class ZeroBERTo(nn.Module):
+  def __init__(self, classes_list):
+    super(ZeroBERTo, self).__init__()
+    #self.text_splitter
+    self.embedding = SentenceTransformer('distiluse-base-multilingual-cased-v2', device=device)
+    self.queries = self.create_queries(classes_list)
+    #self.cluster
+    self.softmax = nn.Softmax(dim=1)
+  
+  def create_queries(self, classes_list):
+    return self.embedding.encode(sentences=classes_list, convert_to_tensor=True, normalize_embeddings=True)
+
+  def forward(self, x):
+    #splitted_doc = self.text_splitter(x)
+    splitted_doc = x
+    doc_emb = self.embedding.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True)
+    logits = torch.sum(doc_emb*self.queries, axis=-1)
+    z = self.softmax(logits.unsqueeze(0))
+    return z
 
 
 def getPredictions(setfit_trainer):
@@ -50,7 +76,8 @@ def runZeroShotPipeline(classifier,data,config):
             top_label = pred['labels'][0]
             if len(preds) % 50 == 0:
                 t1 = time.time()-t0
-                print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( ((t1)/len(preds))*len(data)/60 ,1),"minutes")
+                eta = ((t1)/len(preds))*len(data)/60
+                print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( eta ,1),"minutes")
 
     print("Total Predictions:",len(preds))
     return preds
