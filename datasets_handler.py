@@ -81,7 +81,26 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
     raw_data_final = evaluation_metrics.Encoder(raw_data_final,[new_class_col])
     return raw_data_final
 
+def splitDataset(dataframe,config):
+    if (split == "zeroshot"):
+        df_train = dataframe[~dataframe['prediction'].isna()].groupby(new_class_col+"_code")[[data_col,new_class_col+"_code"]].apply(lambda s: s.sample(min(len(s),top_n),random_state=random_state))
 
+        keys = list(df_train.columns.values)
 
+        i1 = dataframe.set_index(keys).index
+        i2 = df_train.set_index(keys).index
 
+        df_test = dataframe[~i1.isin(i2)]
 
+        df_test = df_test.groupby(new_class_col+"_code")[[data_col,new_class_col+"_code"]].apply(lambda x:x.sample(int(len(x)*test_dataset_sample_size),random_state=random_state))
+
+        df_train = df_train.astype(str)
+        df_test = df_test.astype(str)
+
+        ### transforma dataframes em datasetdict
+
+        train_dataset = Dataset.from_dict(df_train)
+        test_dataset = Dataset.from_dict(df_test)
+        dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
+        dataset = dataset_dict
+    return dataset

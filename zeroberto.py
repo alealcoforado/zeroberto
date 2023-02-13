@@ -6,15 +6,18 @@ import torch.nn as nn
 from sentence_transformers import SentenceTransformer
 # -*- coding: utf-8 -*-
 # !pip install sentence_transformers
+def getDevice():
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+    return device
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
+print(torch.device)
 class ZeroBERTo(nn.Module):
   def __init__(self, classes_list, hypothesis_template):
     super(ZeroBERTo, self).__init__()
     #self.text_splitter
 
-    self.embedding = SentenceTransformer('sentence-transformers/nli-roberta-base-v2', device=device)
+    self.embedding = SentenceTransformer('sentence-transformers/nli-roberta-base-v2')
     self.queries = self.create_queries(classes_list,hypothesis_template)
     #self.cluster
     self.softmax = nn.Softmax(dim=1)
@@ -39,8 +42,9 @@ def runZeroberto(model,data,config):
     preds = []
     t0 = time.time()
     for text in data:
-        preds.append(model(text).numpy()[0])
-
+        pred = (model(text).numpy()[0])
+        preds.append(pred)
+        # print(pred)
         if len(preds) % 50 == 0:
             t1 = time.time()-t0
             eta = ((t1)/len(preds))*len(data)/60
