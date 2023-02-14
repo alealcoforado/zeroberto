@@ -17,7 +17,8 @@ class ZeroBERTo(nn.Module):
     super(ZeroBERTo, self).__init__()
     #self.text_splitter
 
-    self.embedding = SentenceTransformer('sentence-transformers/nli-roberta-base-v2')
+    # self.embedding = SentenceTransformer('sentence-transformers/nli-roberta-base-v2')
+    self.embedding = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
     self.queries = self.create_queries(classes_list,hypothesis_template)
     #self.cluster
     self.softmax = nn.Softmax(dim=1)

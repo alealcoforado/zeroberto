@@ -14,6 +14,7 @@ def Encoder(df,columnsToEncode=[]):
           for feature in columnsToEncode:
               try:
                   df[feature+"_code"] = le.fit_transform(df[feature])
+                  df[feature+"_code"] = df[feature+"_code"].apply(int)
               except:
                   print('Error encoding '+feature)
           return df
