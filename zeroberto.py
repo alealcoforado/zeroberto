@@ -123,7 +123,7 @@ def runZeroberto(model,data,config):
         pred = (model(text).numpy()[0])
         preds.append(pred)
         # print(pred)
-        if len(preds) % 50 == 0:
+        if len(preds) % 100 == 0:
             t1 = time.time()-t0
             eta = ((t1)/len(preds))*len(data)/60
             print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( eta ,1),"minutes")
