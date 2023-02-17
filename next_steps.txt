@@ -30,3 +30,10 @@ cada vez q roda o self training, oq acontece?...
 estudo de ablação + gráficos
 heatmaps
 
+
+---------------
+
+resultados de papers:
+F1: 81.4 --- Ag News
+
+

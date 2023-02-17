@@ -1,6 +1,10 @@
 import datetime
 import pandas as pd
 import evaluation_metrics
+import datasets
+from datasets import load_dataset
+from datasets import Dataset
+
 dict_classes_folha = {
     'poder':"Poder e Política no Brasil",
     'mercado':"Mercado",
@@ -25,21 +29,31 @@ dict_classes_ag_news = {
 def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
-from datasets import load_dataset
 
 def getDataset(which_dataset,path=None):
     implemented_datasets = ["ag_news"]
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
         dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
-        dataset_df['label_text'] = dataset_df['label'].map(dict_classes_ag_news)
+        class_col = 'class'
+        data_col = 'text'
+        dataset_df[class_col] = dataset_df['label'].map(dict_classes_ag_news)
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df =dataset_df.rename(columns=dict_cols) 
+
         # print(dataset)
-        return dataset_df, 'text', 'label_text'
+        return dataset_df, 'text', 'class'
+    
     if which_dataset == "bbcnews":
         if path == None:
             path = '/Users/alealcoforado/Documents/Projetos/Datasets/bbc-news/BBC News Train.csv'
         dataset_df = pd.read_csv(path, sep = ',')
-        return dataset_df, 'Text', 'Category'
+        data_col = 'Text'
+        class_col = 'Category'
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df = dataset_df.rename(columns=dict_cols) 
+        return dataset_df,  'text', 'class'
+    
     if which_dataset=='folhauol':
         if path == None:
             path = '/Users/alealcoforado/Documents/Projetos/Datasets/folhauol/folhauol_clean_df_articles.csv'
@@ -50,11 +64,14 @@ def getDataset(which_dataset,path=None):
         class_col = 'category'
         dataset_df[class_col] = dataset_df[class_col].map(dict_classes_folha)
 
-        return dataset_df, data_col, class_col
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df =dataset_df.rename(columns=dict_cols) 
+        return dataset_df,  'text', 'class'
 
 
     print ("No dataset chosen. Options are {}.".format(implemented_datasets))
     return None
+
 
 
 def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zeroshot_data_local_path=None):
@@ -81,26 +98,43 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
     raw_data_final = evaluation_metrics.Encoder(raw_data_final,[new_class_col])
     return raw_data_final, new_class_col
 
-def splitDataset(dataframe,config):
-    if (split == "zeroshot"):
-        df_train = dataframe[~dataframe['prediction'].isna()].groupby(new_class_col+"_code")[[data_col,new_class_col+"_code"]].apply(lambda s: s.sample(min(len(s),top_n),random_state=random_state))
+def splitDataset(raw_data,config):
+    data_col = config['data_col']
+    new_class_col = config['new_class_col']
+    test_dataset_sample_size = config['max_inferences']
+    # print(test_dataset_sample_size)
+    random_state = config['random_state']
+    how = config['split']
+    if (how == "zeroshot"):
 
+        df_train = raw_data[~raw_data['prediction'].isna()
+                            ].groupby("prediction_code",group_keys=True)[[data_col,"prediction_code"]
+                                                        ].apply(lambda s: s.sample(min(len(s),config['top_n'])
+                                                                                   ,random_state=random_state))
         keys = list(df_train.columns.values)
 
-        i1 = dataframe.set_index(keys).index
+        i1 = raw_data.set_index(keys).index
+        # print(i1)
         i2 = df_train.set_index(keys).index
+        # print(i2)
+        df_test = raw_data[~i1.isin(i2)]
+        # print(len(df_test))
+        df_test = df_test.groupby("class",group_keys=True
+                                  )[[data_col,new_class_col]
+                                    ].apply(lambda x:x.sample(int(test_dataset_sample_size/len(config['classes'])),
+                                                              random_state=random_state))
+        # print(len(df_test))
 
-        df_test = dataframe[~i1.isin(i2)]
+        df_train[data_col] = df_train[data_col].astype(str)
+        df_train = df_train.rename(columns={'prediction_code':'class_code'})
+        df_test[data_col] = df_test[data_col].astype(str)
+        df_test = evaluation_metrics.Encoder(df_test,[new_class_col])
+        df_test = df_test.rename(columns={new_class_col+"_code":'class_code'})
+        # print(df_train.shape,df_test.shape)
+    return df_train,df_test
 
-        df_test = df_test.groupby(new_class_col+"_code")[[data_col,new_class_col+"_code"]].apply(lambda x:x.sample(int(len(x)*test_dataset_sample_size),random_state=random_state))
-
-        df_train = df_train.astype(str)
-        df_test = df_test.astype(str)
-
-        ### transforma dataframes em datasetdict
-
-        train_dataset = Dataset.from_dict(df_train)
-        test_dataset = Dataset.from_dict(df_test)
-        dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
-        dataset = dataset_dict
-    return dataset
+def buildDatasetDict(df_train,df_test):
+    train_dataset = Dataset.from_dict(df_train)
+    test_dataset = Dataset.from_dict(df_test)
+    # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
+    return train_dataset,test_dataset

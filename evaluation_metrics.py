@@ -4,6 +4,7 @@ import pandas as pd
 import datasets_handler
 import os
 import pathlib
+from datasets import Dataset
 
 def Encoder(df,columnsToEncode=[]):
           # columnsToEncode = list(df.select_dtypes(include=['category']))
