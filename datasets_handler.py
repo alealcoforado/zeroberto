@@ -4,6 +4,8 @@ import evaluation_metrics
 import datasets
 from datasets import load_dataset
 from datasets import Dataset
+import re
+import numpy as np
 
 dict_classes_folha = {
     'poder':"Poder e Política no Brasil",
@@ -65,14 +67,12 @@ def getDataset(which_dataset,path=None):
         dataset_df[class_col] = dataset_df[class_col].map(dict_classes_folha)
 
         dict_cols = {data_col: 'text', class_col: 'class'}
-        dataset_df =dataset_df.rename(columns=dict_cols) 
+        dataset_df = dataset_df.drop(columns='text').rename(columns=dict_cols) 
         return dataset_df,  'text', 'class'
 
 
     print ("No dataset chosen. Options are {}.".format(implemented_datasets))
     return None
-
-
 
 def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zeroshot_data_local_path=None):
     if zeroshot_data_local_path==None:
@@ -109,7 +109,7 @@ def splitDataset(raw_data,config):
 
         df_train = raw_data[~raw_data['prediction'].isna()
                             ].groupby("prediction_code",group_keys=True)[[data_col,"prediction_code"]
-                                                        ].apply(lambda s: s.sample(min(len(s),config['top_n'])
+                                                        ].apply(lambda s: s.sample(min(len(s),config['n_examples'])
                                                                                    ,random_state=random_state))
         keys = list(df_train.columns.values)
 
@@ -138,3 +138,15 @@ def buildDatasetDict(df_train,df_test):
     test_dataset = Dataset.from_dict(df_test)
     # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
     return train_dataset,test_dataset
+
+def splitDocuments(docs: pd.Series()) -> list():
+    all_sentences = np.array(docs.apply(lambda x : re.sub(r'(\d+)(\.)(\d+)',r"\1"+r"\3", x)).str.split("."))
+    flat_sentences = [s for sentences in all_sentences for s in sentences]
+    train_sentences = dropEmptyStrings(flat_sentences)
+    return train_sentences
+
+def dropEmptyStrings(strings_list):
+    for s in strings_list:
+        if s=="" or bool(re.search('^\ +$',s)):
+            strings_list.remove(s)
+    return strings_list

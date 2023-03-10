@@ -7,6 +7,13 @@ import evaluation_metrics
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsRegressor
+from sentence_transformers import SentenceTransformer, LoggingHandler
+from sentence_transformers import models, util, datasets, evaluation, losses
+from torch.utils.data import DataLoader
+import tqdm
+tqdm.tqdm()
+import nltk
+# nltk.download('punkt')
 from sklearn.neighbors import KNeighborsClassifier
 # -*- coding: utf-8 -*-
 # !pip install sentence_transformers
@@ -42,8 +49,31 @@ class ZeroBERTo(nn.Module):
                                   init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
     else: self.clusterModel = clusterModel
 
+
     self.softmax = nn.Softmax(dim=1)
   
+  def fit (self, sentences, batch_size = 8, epochs = 10):
+    ##### Implementation of TSDAE - Unsupervised Learning for Transformers
+    # https://www.sbert.net/examples/unsupervised_learning/TSDAE/README.html
+
+    # Create the special denoising dataset that adds noise on-the-fly
+    train_data = datasets.DenoisingAutoEncoderDataset(sentences)
+
+    # DataLoader to batch your data
+    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+
+    # Use the denoising auto-encoder loss
+    train_loss = losses.DenoisingAutoEncoderLoss(self.embeddingModel,decoder_name_or_path='sentence-transformers/stsb-xlm-r-multilingual',tie_encoder_decoder=True) # decoder_name_or_path=model_name
+
+    # Call the fit method
+    self.embeddingModel.fit(
+        train_objectives=[(train_dataloader, train_loss)],
+        epochs=epochs,
+        weight_decay=0,
+        scheduler='constantlr',
+        optimizer_params={'lr': 3e-5},
+        show_progress_bar=True )
+
   def create_queries(self, classes_list, hypothesis):
 
     queries = []
@@ -78,7 +108,7 @@ class ZeroBERTo(nn.Module):
     z = self.softmax(logits.unsqueeze(0))
     return z
 
-  def evaluateLabeling(self, y_pred_probs,ascending=False):
+  def evaluateLabeling(self, y_pred_probs,ascending=False,top_n=16):
     df_probs = pd.DataFrame(y_pred_probs,columns=self.classes,index=self.train_dataset.index)
 
     if self.labeling_method == "kmeans":
@@ -100,7 +130,7 @@ class ZeroBERTo(nn.Module):
 
     df_predictions_probs = pd.concat([final_result_df_encoded,
                                       pd.Series(prob_results,name='top_probability')],axis=1)
-    for i in range(16):
+    for i in range(top_n):
        self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=i+1)
     self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=len(self.train_dataset))
 
@@ -114,6 +144,7 @@ class ZeroBERTo(nn.Module):
       print(acc)
       return 
   
+
 
 
 def runZeroberto(model,data,config):

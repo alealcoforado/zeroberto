@@ -26,11 +26,14 @@ new_version=$major_version.$minor_version.$patch_version
 echo "new_version: "$new_version
 
 git add .  
-git commit -m "$desc" --quiet
-git push origin main --quiet
+# git add -u
+# git lfs track stsb-xlm-r-multilingual.zip 
+git commit -m "$desc" #--quiet
+git push origin main #--quiet
 echo $new_version >>versions.txt
 echo "Commited to github"
 
 
 
 
+#GIT_LFS_SKIP_SMUDGE=1
