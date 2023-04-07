@@ -81,6 +81,24 @@ def getDataset(which_dataset,path=None):
         dict_cols = {data_col: 'text', class_col: 'class'}
         dataset_df = dataset_df.drop(columns='text').rename(columns=dict_cols) 
         return dataset_df,  'text', 'class'
+    if which_dataset == "hyperpartisan":
+        if path == None:
+            path = ''
+        dataset_df = pd.read_csv(path, sep = ',')
+        data_col = 'text'
+        class_col = 'hyperpartisan'
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df = dataset_df.rename(columns=dict_cols) 
+        return dataset_df,  'text', 'class'
+    if which_dataset == "20newsgroup":
+        if path == None:
+            path = ''
+        dataset_df = pd.read_csv(path, sep = ',')
+        data_col = 'text'
+        class_col = 'target'
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df = dataset_df.rename(columns=dict_cols) 
+        return dataset_df,  'text', 'class'
 
     if which_dataset=='ml':
         if path == None:
