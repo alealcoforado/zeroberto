@@ -32,7 +32,7 @@ class ZeroBERTo(nn.Module):
     if embeddingModel == None:
        self.embeddingModel = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual',device=getDevice())
     else:
-       self.embeddingModel = embeddingModel
+       self.embeddingModel = SentenceTransformer(embeddingModel,device=getDevice())
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
     self.labeling_method = labeling_method
     self.hypothesis_template = hypothesis_template
