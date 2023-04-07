@@ -28,12 +28,17 @@ dict_classes_ag_news = {
     3:"science and technology"
    }
 
+dict_classes_imdb = {
+    0 : "positive",
+    1 : "negative"
+    }
+
 def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
 
 def getDataset(which_dataset,path=None):
-    implemented_datasets = ["ag_news"]
+    implemented_datasets = ["ag_news","bbcnews","folhauol"]
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
         dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
@@ -42,8 +47,16 @@ def getDataset(which_dataset,path=None):
         dataset_df[class_col] = dataset_df['label'].map(dict_classes_ag_news)
         dict_cols = {data_col: 'text', class_col: 'class'}
         dataset_df =dataset_df.rename(columns=dict_cols) 
-
-        # print(dataset)
+        return dataset_df, 'text', 'class'
+    
+    if which_dataset == "imdb":
+        dataset = load_dataset("imdb")
+        dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
+        class_col = 'class'
+        data_col = 'text'
+        dataset_df[class_col] = dataset_df['label'].map(dict_classes_imdb)
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df =dataset_df.rename(columns=dict_cols) 
         return dataset_df, 'text', 'class'
     
     if which_dataset == "bbcnews":
@@ -59,7 +72,6 @@ def getDataset(which_dataset,path=None):
     if which_dataset=='folhauol':
         if path == None:
             path = '/Users/alealcoforado/Documents/Projetos/Datasets/folhauol/folhauol_clean_df_articles.csv'
-        # arq = '/content/drive/MyDrive/folhauol_clean_df_articles.csv'
         dataset_df = pd.read_csv(path)
         dataset_df['full_text'] = dataset_df['title'].astype(str)+dataset_df['text'].astype(str)
         data_col = 'full_text'
@@ -70,6 +82,16 @@ def getDataset(which_dataset,path=None):
         dataset_df = dataset_df.drop(columns='text').rename(columns=dict_cols) 
         return dataset_df,  'text', 'class'
 
+    if which_dataset=='ml':
+        if path == None:
+            path = '/Users/alealcoforado/Documents/Projetos/Datasets/ml/joao_rubinato - base_raw.csv'
+        dataset_df = pd.read_csv(path)
+        data_col = 'pista_raw'
+        class_col = 'macro_raw'
+        dataset_df =dataset_df[(dataset_df['tem_explicação?']==True) & (dataset_df['tem_texto?']==True) & (dataset_df['tem_macro?']==True)]
+        dataset_df = dataset_df.astype(str)
+
+        return dataset_df
 
     print ("No dataset chosen. Options are {}.".format(implemented_datasets))
     return None
@@ -119,10 +141,11 @@ def splitDataset(raw_data,config):
         # print(i2)
         df_test = raw_data[~i1.isin(i2)]
         # print(len(df_test))
+        print(int(test_dataset_sample_size/len(config['classes'])))
         df_test = df_test.groupby("class",group_keys=True
                                   )[[data_col,new_class_col]
                                     ].apply(lambda x:x.sample(int(test_dataset_sample_size/len(config['classes'])),
-                                                              random_state=random_state))
+                                                              random_state=random_state,replace=True))
         # print(len(df_test))
 
         df_train[data_col] = df_train[data_col].astype(str)
@@ -150,3 +173,12 @@ def dropEmptyStrings(strings_list):
         if s=="" or bool(re.search('^\ +$',s)):
             strings_list.remove(s)
     return strings_list
+
+# def downloadPortugueseWikipedia():
+#     # download Portuguese Wikipedia
+#     get_wiki(path_data,lang)
+#     # create one text file by article
+#     dest = split_wiki(path_data,lang)
+#     # get all articles in one text file and one csv file
+#     get_one_clean_file(dest,lang)
+#     get_one_clean_csv_file(dest,lang)
