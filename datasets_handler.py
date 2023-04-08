@@ -79,7 +79,7 @@ def getDataset(which_dataset,path=None):
         dataset_df[class_col] = dataset_df[class_col].map(dict_classes_folha)
 
         dict_cols = {data_col: 'text', class_col: 'class'}
-        dataset_df = dataset_df.drop(columns='text').rename(columns=dict_cols) 
+        dataset_df = dataset_df.drop(columns='text',errors='ignore').rename(columns=dict_cols) 
         return dataset_df,  'text', 'class'
 
     if which_dataset=='ml':
@@ -106,7 +106,7 @@ def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zer
     # config_df = pd.read_csv(zeroshot_data_local_path+zeroshot_config_file)
     preds_probs_df.index = preds_probs_df['Unnamed: 0'] ### recover original indexes for dataset
     df_top_n = preds_probs_df.sort_values(['top_probability','prediction'], ascending=False).groupby('prediction').head(top_n)
-    df_top_n = df_top_n.drop(columns=["Unnamed: 0",class_col,class_col+"_code"])
+    df_top_n = df_top_n.drop(columns=["Unnamed: 0",class_col,class_col+"_code"],errors='ignore')
     return df_top_n
 
 def mergeLabelingToDataset(raw_data,previous_data,class_col):
