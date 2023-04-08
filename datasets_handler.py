@@ -152,15 +152,16 @@ def splitDataset(raw_data,config):
         df_train = df_train.rename(columns={'prediction_code':'class_code'})
         df_test[data_col] = df_test[data_col].astype(str)
         df_test = evaluation_metrics.Encoder(df_test,[new_class_col])
+        # print(df_test.columns)
         df_test = df_test.rename(columns={new_class_col+"_code":'class_code'})
         # print(df_train.shape,df_test.shape)
     return df_train,df_test
 
-def buildDatasetDict(df_train,df_test):
+def buildDatasetDict(df_train):
     train_dataset = Dataset.from_dict(df_train)
-    test_dataset = Dataset.from_dict(df_test)
+
     # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
-    return train_dataset,test_dataset
+    return train_dataset
 
 def splitDocuments(docs: pd.Series()) -> list():
     all_sentences = np.array(docs.apply(lambda x : re.sub(r'(\d+)(\.)(\d+)',r"\1"+r"\3", x)).str.split("."))
