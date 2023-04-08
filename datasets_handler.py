@@ -73,14 +73,16 @@ def getDataset(which_dataset,path=None):
         if path == None:
             path = '/Users/alealcoforado/Documents/Projetos/Datasets/folhauol/folhauol_clean_df_articles.csv'
         dataset_df = pd.read_csv(path)
-        dataset_df['full_text'] = dataset_df['title'].astype(str)+dataset_df['text'].astype(str)
+        dataset_df['full_text'] = dataset_df['title'].astype(str)+"."+dataset_df['text'].astype(str)
+        dataset_df['len'] = dataset_df['full_text'].apply(len)
+        dataset_df = dataset_df[dataset_df['len']>=300]
         data_col = 'full_text'
         class_col = 'category'
         dataset_df[class_col] = dataset_df[class_col].map(dict_classes_folha)
 
         dict_cols = {data_col: 'text', class_col: 'class'}
         dataset_df = dataset_df.drop(columns='text',errors='ignore').rename(columns=dict_cols) 
-        return dataset_df,  'text', 'class'
+        return dataset_df, 'text', 'class'
 
     if which_dataset=='ml':
         if path == None:

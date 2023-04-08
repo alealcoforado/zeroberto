@@ -49,10 +49,10 @@ class ZeroBERTo(nn.Module):
    
     self.classes = classes_list
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
-    self.hypothesis_template = hypothesis_template
+    self.hypothesis_template = config['template']
     self.queries = self.create_queries(self.classes,self.hypothesis_template)
-    self.labeling_method = labeling_method
-    self.random_state = random_state
+    self.labeling_method = config['labeling_method']
+    self.random_state = config['random_state']
     # self.initial_centroids = initial_centroids
     self.labeling_dataset = evaluation_metrics.Encoder(labeling_dataset,['class'])
     # self.classes_emb = self.encode(classes)
@@ -197,7 +197,7 @@ class ZeroBERTo(nn.Module):
         pred = (self(text).numpy()[0])
         preds.append(pred)
         # print(pred)
-        if len(preds) % 100 == 0:
+        if len(preds) % 500 == 0:
             t1 = time.time()-t0
             eta = ((t1)/len(preds))*len(self.labeling_dataset)/60
             print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( eta ,1),"minutes")
