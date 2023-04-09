@@ -44,8 +44,9 @@ class ZeroBERTo(nn.Module):
     if contrastiveModel == None:
        self.contrastiveModel = SetFitModel.from_pretrained('sentence-transformers/stsb-xlm-r-multilingual', use_differentiable_head=True,
                                         head_params={"out_features":len(classes_list)})
-    else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel, use_differentiable_head=True,
-                                        head_params={"out_features":len(classes_list)})
+    else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel,) 
+                                                              # use_differentiable_head=True,
+                                        # head_params={"out_features":len(classes_list)})
    
     self.classes = classes_list
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
@@ -70,6 +71,7 @@ class ZeroBERTo(nn.Module):
       
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
       eval_data = self.labeling_dataset[['text','class_code']].to_dict('list')
+      print(type(eval_data))
       # print(eval_data['text'])
       self.trainer = SetFitTrainer(
         model=self.contrastiveModel,
@@ -85,9 +87,10 @@ class ZeroBERTo(nn.Module):
         )
       
   def contrastive_train (self):
-    self.trainer.freeze() # Freeze the head
-    # self.trainer.train() # Train only the body
-    self.trainer.unfreeze(keep_body_frozen=self.config['keep_body_frozen_setfit'])
+    if self.config['keep_body_frozen_setfit']:
+      self.trainer.freeze() # Freeze the head
+      # self.trainer.train() # Train only the body
+      self.trainer.unfreeze(keep_body_frozen=self.config['keep_body_frozen_setfit'])
 
     self.trainer.train(
       num_epochs=self.config["num_epochs"], # The number of epochs to train the head or the whole model (body and head)
@@ -154,33 +157,7 @@ class ZeroBERTo(nn.Module):
     z = self.softmax(logits.unsqueeze(0))
     return z
 
-  def evaluateLabeling(self,ascending=False,top_n=16):
-    df_probs = pd.DataFrame(self.labeling_results,columns=self.classes,index=self.labeling_dataset.index)
 
-    if self.labeling_method == "kmeans":
-      label_results = df_probs.apply(lambda row : row.idxmin(),axis=1)
-      prob_results = df_probs.apply(lambda row : row.min(),axis=1)
-      ascending = True
-    if self.labeling_method == "dotproduct":
-      label_results = df_probs.apply(lambda row : row.idxmax(),axis=1)
-      prob_results = df_probs.apply(lambda row : row.max(),axis=1)
-      ascending = False
-    # label_results_df = pd.Series(label_results,name='prediction').sort_index()
-    # true_labels_df = self.labeling_dataset['class'].sort_index()
-    label_results_df = pd.Series(label_results,name='prediction')
-    true_labels_df = self.labeling_dataset['class'].sort_index()
-
-
-    final_result_df = pd.concat([true_labels_df,label_results_df],axis=1)
-    final_result_df_encoded = evaluation_metrics.Encoder(final_result_df,['prediction','class'])
-
-    df_predictions_probs = pd.concat([final_result_df_encoded,
-                                      pd.Series(prob_results,name='top_probability')],axis=1)
-    for i in range(top_n):
-       self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=i+1)
-    self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=len(self.labeling_dataset))
-
-    self.labeling_probabilities = df_predictions_probs
 
   def get_top_n_results(self,dataframe_results,ascending=False,top_n=1):
       df_top_n = dataframe_results.sort_values(['top_probability','prediction'], ascending=ascending).groupby('prediction').head(top_n)
@@ -202,14 +179,44 @@ class ZeroBERTo(nn.Module):
             eta = ((t1)/len(preds))*len(self.labeling_dataset)/60
             print("Preds:",len(preds)," - Total time:",round(t1,2),"seconds"+" - ETA:",round( eta ,1),"minutes")
     self.labeling_results = preds
+    return preds
 
+  def evaluateLabeling(self,ascending=False,top_n=16):
+    df_probs = pd.DataFrame(self.labeling_results,columns=self.classes,index=self.labeling_dataset.index)
+
+    if self.labeling_method == "kmeans":
+      label_results = df_probs.apply(lambda row : row.idxmin(),axis=1)
+      prob_results = df_probs.apply(lambda row : row.min(),axis=1)
+      ascending = True
+    if self.labeling_method == "dotproduct":
+      label_results = df_probs.apply(lambda row : row.idxmax(),axis=1)
+      prob_results = df_probs.apply(lambda row : row.max(),axis=1)
+      ascending = False ### 
+    # label_results_df = pd.Series(label_results,name='prediction').sort_index()
+    # true_labels_df = self.labeling_dataset['class'].sort_index()
+    label_results_df = pd.Series(label_results,name='prediction')
+    true_labels_df = self.labeling_dataset['class'].sort_index()
+
+    final_result_df = pd.concat([true_labels_df,label_results_df],axis=1)
+    final_result_df_encoded = evaluation_metrics.Encoder(final_result_df,['prediction','class'])
+
+    df_predictions_probs = pd.concat([final_result_df_encoded,
+                                      pd.Series(prob_results,name='top_probability')],axis=1)
+    for i in range(top_n):
+       self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=i+1)
+    self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=len(self.labeling_dataset))
+
+    cols_to_add = ['prediction_code','top_probability']
+    self.labeling_dataset =  pd.concat([self.labeling_dataset.drop(columns=cols_to_add,errors='ignore'),
+                                        df_predictions_probs[cols_to_add]],axis=1)
+    
   def getLabelingMetrics(self):
-     labeling_metrics = evaluation_metrics.get_metrics(self.labeling_probabilities['prediction_code'].to_list()
-                                                       ,self.labeling_probabilities['class_code'].to_list())
+     labeling_metrics = evaluation_metrics.get_metrics(self.labeling_dataset['prediction_code'].to_list()
+                                                       ,self.labeling_dataset['class_code'].to_list())
      self.labeling_metrics = labeling_metrics
 
   def saveLabelingResults(self):
-     self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_probabilities)
+     self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_dataset)
 
   # def loadLabelingResults(self):
   #   zeroshot_previous_data = datasets_handler.getZeroshotPreviousData(

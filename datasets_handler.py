@@ -106,9 +106,9 @@ def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zer
 
     # zeroshot_config_file = 'zeroshot_config_test_{exec_time}.csv'.format(exec_time=exec_time)
     # config_df = pd.read_csv(zeroshot_data_local_path+zeroshot_config_file)
-    preds_probs_df.index = preds_probs_df['Unnamed: 0'] ### recover original indexes for dataset
-    df_top_n = preds_probs_df.sort_values(['top_probability','prediction'], ascending=False).groupby('prediction').head(top_n)
-    df_top_n = df_top_n.drop(columns=["Unnamed: 0",class_col,class_col+"_code"],errors='ignore')
+    preds_probs_df.index = preds_probs_df['Unnamed: 0.1'] ### recover original indexes for dataset
+    df_top_n = preds_probs_df.sort_values(['top_probability','prediction_code'], ascending=False).groupby('prediction_code').head(top_n)
+    df_top_n = df_top_n.drop(columns=["Unnamed: 0.1",class_col,class_col+"_code"],errors='ignore')
     return df_top_n
 
 def mergeLabelingToDataset(raw_data,previous_data,class_col):
@@ -122,42 +122,36 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
     raw_data_final = evaluation_metrics.Encoder(raw_data_final,[new_class_col])
     return raw_data_final, new_class_col
 
-def splitDataset(raw_data,config):
+def splitDataset(raw_data, config):
+    # Get configuration values
     data_col = config['data_col']
-    new_class_col = config['new_class_col']
+    # new_class_col = config['new_class_col']
     test_dataset_sample_size = config['max_inferences']
-    # print(test_dataset_sample_size)
     random_state = config['random_state']
     how = config['split']
-    if (how == "zeroshot"):
 
-        df_train = raw_data[~raw_data['prediction'].isna()
-                            ].groupby("prediction_code",group_keys=True)[[data_col,"prediction_code"]
-                                                        ].apply(lambda s: s.sample(min(len(s),config['n_examples'])
-                                                                                   ,random_state=random_state))
-        keys = list(df_train.columns.values)
+    if how == "zeroshot":
+        # Split data into train set only
+        train_data = raw_data[~raw_data['prediction_code'].isna()].groupby("prediction_code", group_keys=True)\
+            .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
 
+        # Rename columns and convert data types
+        train_data = train_data.rename(columns={'prediction_code': 'class_code'})
+        train_data[data_col] = train_data[data_col].astype(str)
+        train_data['class_code'] = train_data['class_code'].astype(int)
+
+        return train_data[[data_col,'class_code']]
+    
+    if how == 'fewshot': 
+        # Split data into train and test sets by selecting a random subset of each class
+        # for the training set and the remaining data for the test set
+        train_data = raw_data.groupby('class_code').head(config['training_examples'])[[data_col,'class_code']]
+        keys = list(train_data.columns.values)
         i1 = raw_data.set_index(keys).index
-        # print(i1)
-        i2 = df_train.set_index(keys).index
-        # print(i2)
-        df_test = raw_data[~i1.isin(i2)]
-        # print(len(df_test))
-        print(int(test_dataset_sample_size/len(config['classes'])))
-        df_test = df_test.groupby("class",group_keys=True
-                                  )[[data_col,new_class_col]
-                                    ].apply(lambda x:x.sample(int(test_dataset_sample_size/len(config['classes'])),
-                                                              random_state=random_state,replace=True))
-        # print(len(df_test))
+        i2 = train_data.set_index(keys).index
+        test_data = raw_data[~i1.isin(i2)]
+        return train_data[[data_col,'class_code']]
 
-        df_train[data_col] = df_train[data_col].astype(str)
-        df_train = df_train.rename(columns={'prediction_code':'class_code'})
-        df_test[data_col] = df_test[data_col].astype(str)
-        df_test = evaluation_metrics.Encoder(df_test,[new_class_col])
-        # print(df_test.columns)
-        df_test = df_test.rename(columns={new_class_col+"_code":'class_code'})
-        # print(df_train.shape,df_test.shape)
-    return df_train,df_test
 
 def buildDatasetDict(df_train):
     train_dataset = Dataset.from_dict(df_train)
