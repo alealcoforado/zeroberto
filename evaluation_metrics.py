@@ -36,9 +36,9 @@ def get_metric(y_pred,y_ref,metric="accuracy",average="binary"):
 def get_metrics(y_pred,y_ref,metrics=["accuracy","precision","recall","f1"]):
 
    all_metrics = {}
-   df_encoded = Encoder(pd.DataFrame({"pred":y_pred,"ref":y_ref}))
-   y_pred = df_encoded['pred_code']
-   y_ref = df_encoded['ref_code']
+  #  df_encoded = Encoder(pd.DataFrame({"pred":y_pred,"ref":y_ref}))
+  #  y_pred = df_encoded['pred_code']
+  #  y_ref = df_encoded['ref_code']
 
    averages = ['weighted','macro']
    for average in averages:

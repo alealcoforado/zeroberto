@@ -72,7 +72,7 @@ class ZeroBERTo(nn.Module):
       
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
       eval_data = self.labeling_dataset[['text','class_code']].to_dict('list')
-      print(type(eval_data))
+      # print(type(eval_data))
       # print(eval_data['text'])
       self.trainer = SetFitTrainer(
         model=self.contrastiveModel,
@@ -81,10 +81,13 @@ class ZeroBERTo(nn.Module):
         eval_dataset = Dataset.from_dict(eval_data),
 
         loss_class=CosineSimilarityLoss,
-        batch_size=self.config["batch_size"],
         num_iterations=self.config["num_pairs"], # Number of text pairs to generate for contrastive learning
         num_epochs=self.config["num_epochs"], # Number of epochs to use for contrastive learning
-        column_mapping = self.column_mapping # NÃO mudar 
+        column_mapping = self.column_mapping, # NÃO mudar 
+        batch_size=self.config["batch_size"],
+        body_learning_rate=1e-5, # The body's learning rate
+        learning_rate=1e-2, # The head's learning rate
+        l2_weight=0.1, # Weight decay on **both** the body and head. If `None`, will use 0.01.
         )
       
   def contrastive_train(self):
@@ -92,15 +95,10 @@ class ZeroBERTo(nn.Module):
       self.trainer.freeze() # Freeze the head
       # self.trainer.train() # Train only the body
       self.trainer.unfreeze(keep_body_frozen=self.config['keep_body_frozen_setfit'])
+      print("freeze")
 
     self.trainer.train(
-      num_epochs=self.config["num_epochs"], # The number of epochs to train the head or the whole model (body and head)
-      batch_size=self.config["batch_size"],
-      body_learning_rate=1e-5, # The body's learning rate
-      learning_rate=1e-2, # The head's learning rate
-      l2_weight=0.1, # Weight decay on **both** the body and head. If `None`, will use 0.01.
     )
-    return
   
   def fit (self, sentences, batch_size = 8, epochs = 10):
     ##### Implementation of TSDAE - Unsupervised Learning for Transformers
