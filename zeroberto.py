@@ -38,11 +38,11 @@ class ZeroBERTo(nn.Module):
     super(ZeroBERTo, self).__init__()
 #    self.embeddingModel = SentenceTransformer('sentence-transformers/nli-roberta-base-v2')
     if embeddingModel == None:
-       self.embeddingModel = SentenceTransformer('sentence-transformers/stsb-xlm-r-multilingual',device=getDevice())
+       self.embeddingModel = SentenceTransformer(config['similarity_model'],device=getDevice())
     else: self.embeddingModel = SentenceTransformer(embeddingModel,device=device)
    
     if contrastiveModel == None:
-       self.contrastiveModel = SetFitModel.from_pretrained('sentence-transformers/stsb-xlm-r-multilingual', use_differentiable_head=True,
+       self.contrastiveModel = SetFitModel.from_pretrained(config['setfit_model'], use_differentiable_head=True,
                                         head_params={"out_features":len(classes_list)})
     else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel) 
                                                               # use_differentiable_head=True,
@@ -56,7 +56,7 @@ class ZeroBERTo(nn.Module):
     self.labeling_method = config['labeling_method']
     self.random_state = config['random_state']
     # self.initial_centroids = initial_centroids
-    self.labeling_dataset = evaluation_metrics.Encoder(labeling_dataset,['class'])
+    self.labeling_dataset = labeling_dataset
     print(3)
     # self.initial_centroids = np.array(self.queries,dtype=np.double)
 
@@ -87,7 +87,7 @@ class ZeroBERTo(nn.Module):
         column_mapping = self.column_mapping # NÃO mudar 
         )
       
-  def contrastive_train (self):
+  def contrastive_train(self):
     if self.config['keep_body_frozen_setfit']:
       self.trainer.freeze() # Freeze the head
       # self.trainer.train() # Train only the body
@@ -236,7 +236,7 @@ class ZeroBERTo(nn.Module):
 
     x_test = eval_dataset["text"]
     print("Running predictions on {} sentences.".format(len(x_test)))
-    y_pred = setfit_trainer.model.predict(x_test)
+    y_pred = setfit_trainer.model.predict(x_test).cpu()
     self.y_pred = y_pred #### xxx remover depois
     # return y_pred 
   

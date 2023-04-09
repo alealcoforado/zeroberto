@@ -82,6 +82,7 @@ def getDataset(which_dataset,path=None):
 
         dict_cols = {data_col: 'text', class_col: 'class'}
         dataset_df = dataset_df.drop(columns='text',errors='ignore').rename(columns=dict_cols) 
+        dataset_df = evaluation_metrics.Encoder(dataset_df,['class'])
         return dataset_df, 'text', 'class'
 
     if which_dataset=='ml':
@@ -137,8 +138,8 @@ def splitDataset(raw_data, config):
 
         # Rename columns and convert data types
         train_data = train_data.rename(columns={'prediction_code': 'class_code'})
-        train_data[data_col] = train_data[data_col].astype(str)
-        train_data['class_code'] = train_data['class_code'].astype(int)
+        train_data[data_col] = train_data[data_col].apply(str)
+        train_data['class_code'] = train_data['class_code'].apply(int)
 
         return train_data[[data_col,'class_code']]
     
@@ -150,7 +151,13 @@ def splitDataset(raw_data, config):
         i1 = raw_data.set_index(keys).index
         i2 = train_data.set_index(keys).index
         test_data = raw_data[~i1.isin(i2)]
-        return train_data[[data_col,'class_code']]
+        train_data[data_col] = train_data[data_col].apply(str)
+        train_data['class_code'] = train_data['class_code'].apply(int)
+        test_data[data_col] = test_data[data_col].apply(str)
+        test_data['class_code'] = test_data['class_code'].apply(int)
+
+       
+        return train_data[[data_col,'class_code']],test_data[[data_col,'class_code']]
 
 
 def buildDatasetDict(df_train):
