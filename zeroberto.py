@@ -14,6 +14,8 @@ from sentence_transformers.losses import CosineSimilarityLoss
 from setfit import SetFitModel, SetFitTrainer
 import tqdm
 tqdm.tqdm()
+from sklearn.preprocessing import LabelEncoder
+
 import nltk
 import datasets_handler
 # nltk.download('punkt')
@@ -53,6 +55,7 @@ class ZeroBERTo(nn.Module):
     self.classes = classes_list
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
     self.hypothesis_template = config['template']
+    self.labelEncoder = config['label_encoder']
     print(1)
     self.queries = self.create_queries(self.classes,self.hypothesis_template)
     self.labeling_method = config['labeling_method']
@@ -70,11 +73,11 @@ class ZeroBERTo(nn.Module):
     self.softmax = nn.Softmax(dim=1).to(device)
     print(4)
 
-  def buildTrainer(self,train_dataset):
+  def buildTrainer(self,train_dataset,test_dataset=None):
       
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
-      eval_data = self.labeling_dataset[['text','class_code']].to_dict('list')
-
+      if test_dataset==None:
+        test_dataset = Dataset.from_dict(self.labeling_dataset[['text','class_code']].to_dict('list')),
       # self.trainer = SetFitTrainer(
       #   model=self.contrastiveModel,
       #   train_dataset=train_dataset,
@@ -91,11 +94,11 @@ class ZeroBERTo(nn.Module):
       self.trainer = SetFitTrainer(
         model= self.contrastiveModel,
         train_dataset=train_dataset,
-        eval_dataset = Dataset.from_dict(self.labeling_dataset[['text','class_code']].to_dict('list')),
+        eval_dataset = test_dataset,
         loss_class=CosineSimilarityLoss,
-        num_iterations=5,
+        num_iterations=self.config['num_pairs'],
         column_mapping={"text": "text", "class_code": "label"},
-        batch_size = 8,
+        batch_size = self.config['batch_size'],
         )
       
   def contrastive_train(self):
@@ -190,35 +193,44 @@ class ZeroBERTo(nn.Module):
     self.labeling_results = preds
     return preds
 
-  def evaluateLabeling(self,ascending=False,top_n=16):
-    df_probs = pd.DataFrame(self.labeling_results,columns=self.classes,index=self.labeling_dataset.index)
+  def evaluateLabeling(self, ascending=False, top_n=16):
+      # Create a DataFrame of the labeling results, with classes as columns and indices as labeling dataset indices
+      df_probs = pd.DataFrame(self.labeling_results, columns=self.classes, index=self.labeling_dataset.index)
 
-    if self.labeling_method == "kmeans":
-      label_results = df_probs.apply(lambda row : row.idxmin(),axis=1)
-      prob_results = df_probs.apply(lambda row : row.min(),axis=1)
-      ascending = True
-    if self.labeling_method == "dotproduct":
-      label_results = df_probs.apply(lambda row : row.idxmax(),axis=1)
-      prob_results = df_probs.apply(lambda row : row.max(),axis=1)
-      ascending = False ### 
-    # label_results_df = pd.Series(label_results,name='prediction').sort_index()
-    # true_labels_df = self.labeling_dataset['class'].sort_index()
-    label_results_df = pd.Series(label_results,name='prediction')
-    true_labels_df = self.labeling_dataset['class'].sort_index()
+      # Determine the labeling method and create label and probability results
+      if self.labeling_method == "kmeans":
+          label_results = df_probs.apply(lambda row: row.idxmin(), axis=1)
+          prob_results = df_probs.apply(lambda row: row.min(), axis=1)
+          ascending = True
+      elif self.labeling_method == "dotproduct":
+          label_results = df_probs.apply(lambda row: row.idxmax(), axis=1)
+          prob_results = df_probs.apply(lambda row: row.max(), axis=1)
+          ascending = False
 
-    final_result_df = pd.concat([true_labels_df,label_results_df],axis=1)
-    final_result_df_encoded = evaluation_metrics.Encoder(final_result_df,['prediction','class'])
+      # Create Series of predicted labels and true labels
+      label_results_df = pd.Series(label_results, name='prediction')
+      # print(label_results_df)
+      true_labels_df = self.labeling_dataset['class_code'].sort_index()
+      
+      # Concatenate true and predicted labels and encode them
+      final_result_df = pd.concat([true_labels_df, label_results_df], axis=1)
+      final_result_df_encoded = evaluation_metrics.Encoder(final_result_df,self.labelEncoder, columnsToEncode=['prediction'])
 
-    df_predictions_probs = pd.concat([final_result_df_encoded,
-                                      pd.Series(prob_results,name='top_probability')],axis=1)
-    for i in range(top_n):
-       self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=i+1)
-    self.get_top_n_results(df_predictions_probs,ascending=ascending,top_n=len(self.labeling_dataset))
 
-    cols_to_add = ['prediction_code','top_probability']
-    self.labeling_dataset =  pd.concat([self.labeling_dataset.drop(columns=cols_to_add,errors='ignore'),
-                                        df_predictions_probs[cols_to_add]],axis=1)
-    
+      print(final_result_df_encoded[['prediction_code','prediction']].drop_duplicates())
+      # Concatenate encoded labels with probabilities
+      df_predictions_probs = pd.concat([final_result_df_encoded, pd.Series(prob_results, name='top_probability')], axis=1)
+
+      # Get top n results
+      for i in range(top_n):
+          self.get_top_n_results(df_predictions_probs, ascending=ascending, top_n=i + 1)
+      self.get_top_n_results(df_predictions_probs, ascending=ascending, top_n=len(self.labeling_dataset))
+
+      # Add prediction code and top probability columns to labeling dataset
+      cols_to_add = ['prediction_code', 'top_probability']
+      self.labeling_dataset = pd.concat([self.labeling_dataset.drop(columns=cols_to_add, errors='ignore'),
+                                        df_predictions_probs[cols_to_add]], axis=1)
+
   def getLabelingMetrics(self):
      labeling_metrics = evaluation_metrics.get_metrics(self.labeling_dataset['prediction_code'].to_list()
                                                        ,self.labeling_dataset['class_code'].to_list())
@@ -234,6 +246,10 @@ class ZeroBERTo(nn.Module):
     
   #   raw_data_final, self.config['new_class_col'] = datasets_handler.mergeLabelingToDataset(
   #      raw_data,zeroshot_previous_data,self.config['class_col'])
+  def predict (self,documents):
+    self.y_pred = self.contrastiveModel.predict(documents)
+    return self.y_pred
+  
 
   def getPredictions(self):
     setfit_trainer = self.trainer
@@ -245,7 +261,7 @@ class ZeroBERTo(nn.Module):
 
     x_test = eval_dataset["text"]
     print("Running predictions on {} sentences.".format(len(x_test)))
-    y_pred = setfit_trainer.model.predict(x_test).cpu()
+    y_pred = setfit_trainer.model.predict(x_test)
     self.y_pred = y_pred #### xxx remover depois
     # return y_pred 
   

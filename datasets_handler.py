@@ -37,7 +37,7 @@ def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
 
-def getDataset(which_dataset,path=None):
+def getDataset(which_dataset,path=None,labelEncoder=None):
     implemented_datasets = ["ag_news","bbcnews","folhauol"]
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
@@ -82,7 +82,7 @@ def getDataset(which_dataset,path=None):
 
         dict_cols = {data_col: 'text', class_col: 'class'}
         dataset_df = dataset_df.drop(columns='text',errors='ignore').rename(columns=dict_cols) 
-        dataset_df = evaluation_metrics.Encoder(dataset_df,['class'])
+        # dataset_df = evaluation_metrics.Encoder(dataset_df,labelEncoder=labelEncoder,columnsToEncode=['class'])
         return dataset_df, 'text', 'class'
 
     if which_dataset=='ml':
@@ -121,7 +121,7 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
     raw_data_final.loc[raw_data_final['prediction'].isna(),new_class_col] = raw_data_final[class_col]
 
 #     ## keep true labels of the rest, for testing
-    raw_data_final = evaluation_metrics.Encoder(raw_data_final,[new_class_col])
+    raw_data_final = evaluation_metrics.Encoder(raw_data_final,columnsToEncode=[new_class_col])
     return raw_data_final, new_class_col
 
 def splitDataset(raw_data, config):
@@ -141,9 +141,11 @@ def splitDataset(raw_data, config):
         train_data = train_data.rename(columns={'prediction_code': 'class_code'})
         train_data[data_col] = train_data[data_col].apply(str)
         # train_data['class_code'] = train_data['class_code'].apply(int)
+        test_data = raw_data
+        test_data[data_col] = test_data[data_col].apply(str)
+        test_data['class_code'] = test_data['class_code'].apply(int)
 
-        return train_data[[data_col,'class_code']]
-    
+
     if how == 'fewshot': 
         # Split data into train and test sets by selecting a random subset of each class
         # for the training set and the remaining data for the test set
@@ -158,14 +160,14 @@ def splitDataset(raw_data, config):
         test_data['class_code'] = test_data['class_code'].apply(int)
 
        
-        return train_data[[data_col,'class_code']],test_data[[data_col,'class_code']]
+    return train_data[[data_col,'class_code']],test_data[[data_col,'class_code']]
 
 
-def buildDatasetDict(df_train):
-    # train_dataset = Dataset.from_dict(df_train)
+def buildDatasetDict(df_train,df_test):
+    test_dataset = Dataset.from_dict(df_test[['text','class_code']].to_dict('list'))
     train_dataset = Dataset.from_dict(df_train[['text','class_code']].to_dict('list'))
     # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
-    return train_dataset
+    return train_dataset,test_dataset
 
 def splitDocuments(docs: pd.Series()) -> list():
     all_sentences = np.array(docs.apply(lambda x : re.sub(r'(\d+)(\.)(\d+)',r"\1"+r"\3", x)).str.split("."))

@@ -6,15 +6,18 @@ import os
 import pathlib
 from datasets import Dataset
 
-def Encoder(df,columnsToEncode=[]):
+def Encoder(df,labelEncoder=None,columnsToEncode=[]):
+          if labelEncoder == None:
+            le = LabelEncoder()
+          else:
+            le = labelEncoder
           # columnsToEncode = list(df.select_dtypes(include=['category']))
           # columnsToEncode = ['Classe_1']
           if columnsToEncode == []:
               columnsToEncode = df.columns
-          le = LabelEncoder()
           for feature in columnsToEncode:
               try:
-                  df[feature+"_code"] = le.fit_transform(df[feature])
+                  df[feature+"_code"] = le.transform(df[feature])
                   df[feature+"_code"] = df[feature+"_code"].apply(int)
               except:
                   print('Error encoding '+feature)
@@ -61,7 +64,7 @@ def get_metrics(y_pred,y_ref,metrics=["accuracy","precision","recall","f1"]):
 # print(get_metrics(encoded['pred_code'],encoded['ref_code']))
 
 
-def saveResults(setfit_config,metrics,local_path):
+def saveResults(setfit_config,metrics,local_path=None):
     agora = datasets_handler.getAgora()
     if local_path == None:
         dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=setfit_config['dataset'])
@@ -79,7 +82,7 @@ def saveResults(setfit_config,metrics,local_path):
 
 
 
-def saveZeroshotResults(zeroberto_config,results,local_path):
+def saveZeroshotResults(zeroberto_config,results,local_path=None):
     agora = datasets_handler.getAgora()
     if local_path == None:
         dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=zeroberto_config['dataset'])
