@@ -102,6 +102,7 @@ def getDataset(which_dataset,path=None):
 def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zeroshot_data_local_path=None):
     if zeroshot_data_local_path==None:
         zeroshot_data_local_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=which_dataset)
+
     zeroshot_preds_and_probs_file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
     preds_probs_df = pd.read_csv(zeroshot_data_local_path+zeroshot_preds_and_probs_file)
 
@@ -139,7 +140,7 @@ def splitDataset(raw_data, config):
         # Rename columns and convert data types
         train_data = train_data.rename(columns={'prediction_code': 'class_code'})
         train_data[data_col] = train_data[data_col].apply(str)
-        train_data['class_code'] = train_data['class_code'].apply(int)
+        # train_data['class_code'] = train_data['class_code'].apply(int)
 
         return train_data[[data_col,'class_code']]
     
@@ -161,8 +162,8 @@ def splitDataset(raw_data, config):
 
 
 def buildDatasetDict(df_train):
-    train_dataset = Dataset.from_dict(df_train)
-
+    # train_dataset = Dataset.from_dict(df_train)
+    train_dataset = Dataset.from_dict(df_train[['text','class_code']].to_dict('list'))
     # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
     return train_dataset
 

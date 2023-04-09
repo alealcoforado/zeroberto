@@ -37,3 +37,8 @@ resultados de papers:
 F1: 81.4 --- Ag News
 
 
+
+drive paths
+
+# data_path = '/content/drive/Othercomputers/My MacBook Pro/Datasets/folhauol/folhauol_clean_df_articles.csv'
+data_path = '/content/drive/MyDrive/Maquina de London/clean_df_articles_folhauol.csv'

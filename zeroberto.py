@@ -42,8 +42,10 @@ class ZeroBERTo(nn.Module):
     else: self.embeddingModel = SentenceTransformer(embeddingModel,device=device)
    
     if contrastiveModel == None:
-       self.contrastiveModel = SetFitModel.from_pretrained(config['setfit_model'], use_differentiable_head=True,
-                                        head_params={"out_features":len(classes_list)})
+       self.contrastiveModel = SetFitModel.from_pretrained(config['setfit_model'], 
+                                                          #  use_differentiable_head=True,
+                                        # head_params={"out_features":len(classes_list)},
+                                        )
     else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel) 
                                                               # use_differentiable_head=True,
                                         # head_params={"out_features":len(classes_list)})
@@ -72,22 +74,28 @@ class ZeroBERTo(nn.Module):
       
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
       eval_data = self.labeling_dataset[['text','class_code']].to_dict('list')
-      # print(type(eval_data))
-      # print(eval_data['text'])
-      self.trainer = SetFitTrainer(
-        model=self.contrastiveModel,
-        train_dataset=train_dataset,
-        # eval_dataset=Dataset.from_dict(self.labeling_dataset[self.column_mapping.keys()].to_dict()),
-        eval_dataset = Dataset.from_dict(eval_data),
 
+      # self.trainer = SetFitTrainer(
+      #   model=self.contrastiveModel,
+      #   train_dataset=train_dataset,
+      #   # eval_dataset=Dataset.from_dict(self.labeling_dataset[self.column_mapping.keys()].to_dict()),
+      #   eval_dataset = Dataset.from_dict(eval_data),
+
+      #   loss_class=CosineSimilarityLoss,
+      #   num_iterations=self.config["num_pairs"], # Number of text pairs to generate for contrastive learning
+      #   num_epochs=self.config["num_epochs"], # Number of epochs to use for contrastive learning
+      #   column_mapping = self.column_mapping, # NÃO mudar 
+      #   batch_size=self.config["batch_size"],
+      #   )
+      
+      self.trainer = SetFitTrainer(
+        model= self.contrastiveModel,
+        train_dataset=train_dataset,
+        eval_dataset = Dataset.from_dict(self.labeling_dataset[['text','class_code']].to_dict('list')),
         loss_class=CosineSimilarityLoss,
-        num_iterations=self.config["num_pairs"], # Number of text pairs to generate for contrastive learning
-        num_epochs=self.config["num_epochs"], # Number of epochs to use for contrastive learning
-        column_mapping = self.column_mapping, # NÃO mudar 
-        batch_size=self.config["batch_size"],
-        body_learning_rate=1e-5, # The body's learning rate
-        learning_rate=1e-2, # The head's learning rate
-        l2_weight=0.1, # Weight decay on **both** the body and head. If `None`, will use 0.01.
+        num_iterations=5,
+        column_mapping={"text": "text", "class_code": "label"},
+        batch_size = 8,
         )
       
   def contrastive_train(self):
@@ -98,7 +106,10 @@ class ZeroBERTo(nn.Module):
       print("freeze")
 
     self.trainer.train(
-    )
+        # body_learning_rate=1e-5, # The body's learning rate
+        # learning_rate=1e-2, # The head's learning rate
+        # l2_weight=0.1, # Weight decay on **both** the body and head. If `None`, will use 0.01.
+        )
   
   def fit (self, sentences, batch_size = 8, epochs = 10):
     ##### Implementation of TSDAE - Unsupervised Learning for Transformers
@@ -169,7 +180,7 @@ class ZeroBERTo(nn.Module):
     preds = []
     t0 = time.time()
     for text in self.labeling_dataset[self.config['data_col']].to_list():
-        pred = (self(text).numpy()[0])
+        pred = (self(text).cpu().numpy()[0])
         preds.append(pred)
         # print(pred)
         if len(preds) % 500 == 0:
@@ -213,8 +224,8 @@ class ZeroBERTo(nn.Module):
                                                        ,self.labeling_dataset['class_code'].to_list())
      self.labeling_metrics = labeling_metrics
 
-  def saveLabelingResults(self):
-     self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_dataset)
+  def saveLabelingResults(self,local_path = None):
+     self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_dataset,local_path=local_path)
 
   # def loadLabelingResults(self):
   #   zeroshot_previous_data = datasets_handler.getZeroshotPreviousData(
@@ -249,7 +260,7 @@ def runZeroberto(model,data,config):
     preds = []
     t0 = time.time()
     for text in data:
-        pred = (model(text).numpy()[0])
+        pred = (model(text).cpu().numpy()[0])
         preds.append(pred)
         # print(pred)
         if len(preds) % 100 == 0:

@@ -61,10 +61,12 @@ def get_metrics(y_pred,y_ref,metrics=["accuracy","precision","recall","f1"]):
 # print(get_metrics(encoded['pred_code'],encoded['ref_code']))
 
 
-def saveResults(setfit_config,metrics):
+def saveResults(setfit_config,metrics,local_path):
     agora = datasets_handler.getAgora()
-
-    dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=setfit_config['dataset'])
+    if local_path == None:
+        dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=setfit_config['dataset'])
+    else:
+        dataset_path = local_path
     folder = pathlib.Path(dataset_path)
     folder.mkdir(parents=True,exist_ok=True)
     metrics_filename = "metrics_setfit_{agora}.csv".format(agora=agora)
@@ -77,10 +79,12 @@ def saveResults(setfit_config,metrics):
 
 
 
-def saveZeroshotResults(zeroberto_config,results):
+def saveZeroshotResults(zeroberto_config,results,local_path):
     agora = datasets_handler.getAgora()
-
-    dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=zeroberto_config['dataset'])
+    if local_path == None:
+        dataset_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=zeroberto_config['dataset'])
+    else:
+        dataset_path = local_path
     folder = pathlib.Path(dataset_path)
     folder.mkdir(parents=True,exist_ok=True)
     results_filename = "predictions_and_probabilities_test_{agora}.csv".format(agora=agora)
