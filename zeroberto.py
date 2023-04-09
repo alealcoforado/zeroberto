@@ -51,12 +51,13 @@ class ZeroBERTo(nn.Module):
     self.classes = classes_list
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
     self.hypothesis_template = config['template']
+    print(1)
     self.queries = self.create_queries(self.classes,self.hypothesis_template)
     self.labeling_method = config['labeling_method']
     self.random_state = config['random_state']
     # self.initial_centroids = initial_centroids
     self.labeling_dataset = evaluation_metrics.Encoder(labeling_dataset,['class'])
-
+    print(3)
     # self.initial_centroids = np.array(self.queries,dtype=np.double)
 
     # if clusterModel == None:
@@ -64,8 +65,8 @@ class ZeroBERTo(nn.Module):
     #                               init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
     # else: self.clusterModel = clusterModel
     self.config = config
-    self.softmax = nn.Softmax(dim=1).to(getDevice())
-
+    self.softmax = nn.Softmax(dim=1).to(device)
+    print(4)
 
   def buildTrainer(self,train_dataset):
       
@@ -131,6 +132,7 @@ class ZeroBERTo(nn.Module):
     # print(queries)
     emb_queries = self.embeddingModel.encode(sentences=queries, convert_to_tensor=True, normalize_embeddings=True,device=device)
     # print(emb_queries)
+    print("queries")
     return emb_queries
 
   def textSplitter(self, x: str):
@@ -241,9 +243,9 @@ class ZeroBERTo(nn.Module):
 
 
 
-###########################
-####### FUNCTIONS #########
-###########################
+############################################################
+####################### FUNCTIONS ##########################
+############################################################
 
 def runZeroberto(model,data,config):
     preds = []
