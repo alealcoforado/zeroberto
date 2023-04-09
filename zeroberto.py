@@ -64,7 +64,7 @@ class ZeroBERTo(nn.Module):
                                   init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
     else: self.clusterModel = clusterModel
     self.config = config
-    self.softmax = nn.Softmax(dim=1)
+    self.softmax = nn.Softmax(dim=1).cpu()
 
 
   def buildTrainer(self,train_dataset):
