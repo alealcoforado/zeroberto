@@ -44,7 +44,7 @@ class ZeroBERTo(nn.Module):
     if contrastiveModel == None:
        self.contrastiveModel = SetFitModel.from_pretrained('sentence-transformers/stsb-xlm-r-multilingual', use_differentiable_head=True,
                                         head_params={"out_features":len(classes_list)})
-    else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel,) 
+    else: self.contrastiveModel = SetFitModel.from_pretrained(contrastiveModel) 
                                                               # use_differentiable_head=True,
                                         # head_params={"out_features":len(classes_list)})
    
@@ -56,15 +56,15 @@ class ZeroBERTo(nn.Module):
     self.random_state = config['random_state']
     # self.initial_centroids = initial_centroids
     self.labeling_dataset = evaluation_metrics.Encoder(labeling_dataset,['class'])
-    # self.classes_emb = self.encode(classes)
-    self.initial_centroids = np.array(self.queries,dtype=np.double)
 
-    if clusterModel == None:
-      self.clusterModel = KMeans(n_clusters=len(self.classes), n_init=1,
-                                  init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
-    else: self.clusterModel = clusterModel
+    # self.initial_centroids = np.array(self.queries,dtype=np.double)
+
+    # if clusterModel == None:
+    #   self.clusterModel = KMeans(n_clusters=len(self.classes), n_init=1,
+    #                               init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
+    # else: self.clusterModel = clusterModel
     self.config = config
-    self.softmax = nn.Softmax(dim=1).cpu()
+    self.softmax = nn.Softmax(dim=1).to(getDevice())
 
 
   def buildTrainer(self,train_dataset):
@@ -146,18 +146,16 @@ class ZeroBERTo(nn.Module):
   def encode(self, x):
     # splitted_doc = self.textSplitter(x)
     splitted_doc = x
-    doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True)
+    doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True,device=device)
     return doc_emb
 
   def forward(self, x):
     # splitted_doc = self.textSplitter(x)
     splitted_doc = x
-    doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True)
+    doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True,device=device)
     logits = torch.sum(doc_emb*self.queries, axis=-1)
     z = self.softmax(logits.unsqueeze(0))
     return z
-
-
 
   def get_top_n_results(self,dataframe_results,ascending=False,top_n=1):
       df_top_n = dataframe_results.sort_values(['top_probability','prediction'], ascending=ascending).groupby('prediction').head(top_n)
