@@ -62,6 +62,7 @@ class ZeroBERTo(nn.Module):
     self.random_state = config['random_state']
     # self.initial_centroids = initial_centroids
     self.labeling_dataset = labeling_dataset
+    self.average_sentence_embeddings = config['average_sentence_embeddings']
     print(3)
     # self.initial_centroids = np.array(self.queries,dtype=np.double)
 
@@ -99,6 +100,7 @@ class ZeroBERTo(nn.Module):
         num_iterations=self.config['num_pairs'],
         column_mapping={"text": "text", "class_code": "label"},
         batch_size = self.config['batch_size'],
+        num_epochs=self.config["num_epochs"],
         )
       
   def contrastive_train(self):
@@ -157,11 +159,29 @@ class ZeroBERTo(nn.Module):
       x_set.append(paragraph.split("."))
     return x_set
 
+  # def encode(self, x):
+  #   # splitted_doc = self.textSplitter(x)
+  #   splitted_doc = x
+  #   doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True,device=device)
+  #   return doc_emb
+
   def encode(self, x):
-    # splitted_doc = self.textSplitter(x)
-    splitted_doc = x
-    doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True,device=device)
-    return doc_emb
+      if (self.average_sentence_embeddings == True):   
+          if '.' in x:
+              sentences = self.textSplitter(x)
+              embeddings = []
+              for sentence in sentences:
+                  encoded_sentence = self.embeddingModel.encode(sentence, convert_to_tensor=True, normalize_embeddings=True)
+                  embeddings.append(encoded_sentence)
+              return torch.mean(torch.stack(embeddings), dim=0)
+          else:
+              doc_emb = self.embeddingModel.encode(x, convert_to_tensor=True, normalize_embeddings=True)
+              return doc_emb
+      else:
+            # splitted_doc = self.textSplitter(x)
+        splitted_doc = x
+        doc_emb = self.embeddingModel.encode(splitted_doc,convert_to_tensor=True, normalize_embeddings=True,device=device)
+      return doc_emb
 
   def forward(self, x):
     # splitted_doc = self.textSplitter(x)
