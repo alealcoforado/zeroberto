@@ -236,6 +236,10 @@ class ZeroBERTo(nn.Module):
                                                        ,self.labeling_dataset['class_code'].to_list())
      self.labeling_metrics = labeling_metrics
 
+  def resetContrastiveModel(self,model_id='sentence-transformers/stsb-xlm-r-multilingual'):
+     self.contrastiveModel = SetFitModel.from_pretrained(model_id)
+
+     
   def saveLabelingResults(self,local_path = None):
      self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_dataset,local_path=local_path)
 
@@ -247,6 +251,7 @@ class ZeroBERTo(nn.Module):
   #   raw_data_final, self.config['new_class_col'] = datasets_handler.mergeLabelingToDataset(
   #      raw_data,zeroshot_previous_data,self.config['class_col'])
   def predict (self,documents):
+    print("Predicting {} documents".format(len(documents)))
     self.y_pred = self.contrastiveModel.predict(documents)
     return self.y_pred
   

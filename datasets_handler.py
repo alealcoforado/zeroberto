@@ -124,21 +124,30 @@ def mergeLabelingToDataset(raw_data,previous_data,class_col):
     raw_data_final = evaluation_metrics.Encoder(raw_data_final,columnsToEncode=[new_class_col])
     return raw_data_final, new_class_col
 
-def splitDataset(raw_data, config):
+def splitDataset(raw_data, config,zeroshot_data_local_path=None):
     # Get configuration values
     data_col = config['data_col']
     # new_class_col = config['new_class_col']
     test_dataset_sample_size = config['max_inferences']
     random_state = config['random_state']
     how = config['split']
-
+   
     if how == "zeroshot":
+        zeroshot_previous_data = getZeroshotPreviousData( ### load results from labeling step and create training data for contrastive learning
+            config['dataset'],config['class_col'],top_n=config['top_n'],
+            exec_time=config['exec_time'],zeroshot_data_local_path=zeroshot_data_local_path)
+        
         # Split data into train set only
-        train_data = raw_data[~raw_data['prediction_code'].isna()].groupby("prediction_code", group_keys=True)\
+        # train_data = raw_data[~raw_data['prediction_code'].isna()].groupby("prediction_code", group_keys=True)\
+        #     .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
+        # print(train_data.sum())
+        train_data = zeroshot_previous_data.groupby("prediction_code", group_keys=True)\
             .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
+        print(train_data.sum())
 
         # Rename columns and convert data types
-        train_data = train_data.rename(columns={'prediction_code': 'class_code'})
+        
+        train_data = train_data.drop(columns='class_code',errors='ignore').rename(columns={'prediction_code': 'class_code'})
         train_data[data_col] = train_data[data_col].apply(str)
         # train_data['class_code'] = train_data['class_code'].apply(int)
         test_data = raw_data
