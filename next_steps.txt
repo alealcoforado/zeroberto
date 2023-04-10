@@ -36,6 +36,19 @@ heatmaps
 resultados de papers:
 F1: 81.4 --- Ag News
 
+https://aclanthology.org/2022.emnlp-main.509.pdf
+AG NEWS - acc 79.2
+YAHOO - acc 56.1
+DBPEDIA - acc 80.4
+AMAZON - acc 92.0
+IMDB - acc 86.7
+
+https://aclanthology.org/2022.emnlp-main.587.pdf
+AG NEWS - acc 86.9
+YAHOO - acc 63.9
+DBPEDIA - acc 93.2
+AMAZON - acc 93.9
+IMDB - acc 91.0
 
 
 drive paths

@@ -105,10 +105,13 @@ def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zer
 
     zeroshot_preds_and_probs_file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
     preds_probs_df = pd.read_csv(zeroshot_data_local_path+zeroshot_preds_and_probs_file)
-
+    # print(preds_probs_df.columns)
     # zeroshot_config_file = 'zeroshot_config_test_{exec_time}.csv'.format(exec_time=exec_time)
     # config_df = pd.read_csv(zeroshot_data_local_path+zeroshot_config_file)
-    preds_probs_df.index = preds_probs_df['Unnamed: 0.1'] ### recover original indexes for dataset
+    if which_dataset=='folha_uol':
+        preds_probs_df.index = preds_probs_df['Unnamed: 0.1'] ### recover original indexes for dataset
+    else:
+        preds_probs_df.index = preds_probs_df['Unnamed: 0']
     df_top_n = preds_probs_df.sort_values(['top_probability','prediction_code'], ascending=False).groupby('prediction_code').head(top_n)
     df_top_n = df_top_n.drop(columns=["Unnamed: 0.1",class_col,class_col+"_code"],errors='ignore')
     return df_top_n
