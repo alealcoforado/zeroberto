@@ -37,11 +37,14 @@ def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
 
-def getDataset(which_dataset,path=None,labelEncoder=None):
+def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
     implemented_datasets = ["ag_news","bbcnews","folhauol"]
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
-        dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
+        if test_only:
+            dataset_df = pd.DataFrame(dataset['test'])
+        else:
+            dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
         class_col = 'class'
         data_col = 'text'
         dataset_df[class_col] = dataset_df['label'].map(dict_classes_ag_news)
@@ -51,8 +54,11 @@ def getDataset(which_dataset,path=None,labelEncoder=None):
     
     if which_dataset == "imdb":
         dataset = load_dataset("imdb")
-        dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
-        class_col = 'class'
+        if test_only:
+            dataset_df = pd.DataFrame(dataset['test'])
+        else:
+            dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
+            class_col = 'class'
         data_col = 'text'
         dataset_df[class_col] = dataset_df['label'].map(dict_classes_imdb)
         dict_cols = {data_col: 'text', class_col: 'class'}
@@ -99,19 +105,33 @@ def getDataset(which_dataset,path=None,labelEncoder=None):
     print ("No dataset chosen. Options are {}.".format(implemented_datasets))
     return None
 
+def getPreviousLabelingResults(filepath=None,exec_time=None,which_dataset=None):
+    if filepath is None:
+        path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=which_dataset)
+    elif filepath is not None:
+        path = filepath
+    
+    file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
+    preds_probs_df = pd.read_csv(path+file)
+    if which_dataset=='folha_uol':
+        preds_probs_df.index = preds_probs_df['Unnamed: 0.1'] ### recover original indexes for dataset
+    else:
+        preds_probs_df.index = preds_probs_df['Unnamed: 0'] ### recover original indexes for dataset
+    return preds_probs_df
+
 def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zeroshot_data_local_path=None):
     if zeroshot_data_local_path==None:
         zeroshot_data_local_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=which_dataset)
 
-    zeroshot_preds_and_probs_file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
-    preds_probs_df = pd.read_csv(zeroshot_data_local_path+zeroshot_preds_and_probs_file)
+    preds_probs_df =  getPreviousLabelingResults(exec_time=exec_time,which_dataset=which_dataset)
+
+    # zeroshot_preds_and_probs_file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
+    # preds_probs_df = pd.read_csv(zeroshot_data_local_path+zeroshot_preds_and_probs_file)
+
     # print(preds_probs_df.columns)
     # zeroshot_config_file = 'zeroshot_config_test_{exec_time}.csv'.format(exec_time=exec_time)
     # config_df = pd.read_csv(zeroshot_data_local_path+zeroshot_config_file)
-    if which_dataset=='folha_uol':
-        preds_probs_df.index = preds_probs_df['Unnamed: 0.1'] ### recover original indexes for dataset
-    else:
-        preds_probs_df.index = preds_probs_df['Unnamed: 0']
+
     df_top_n = preds_probs_df.sort_values(['top_probability','prediction_code'], ascending=False).groupby('prediction_code').head(top_n)
     df_top_n = df_top_n.drop(columns=["Unnamed: 0.1",class_col,class_col+"_code"],errors='ignore')
     return df_top_n
@@ -146,7 +166,7 @@ def splitDataset(raw_data, config,zeroshot_data_local_path=None):
         # print(train_data.sum())
         train_data = zeroshot_previous_data.groupby("prediction_code", group_keys=True)\
             .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
-        print(train_data.sum())
+        # print(train_data.sum())
 
         # Rename columns and convert data types
         
