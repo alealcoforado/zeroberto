@@ -123,7 +123,7 @@ def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zer
     if zeroshot_data_local_path==None:
         zeroshot_data_local_path = '/Users/alealcoforado/Documents/Projetos/Datasets/{which_dataset}/'.format(which_dataset=which_dataset)
 
-    preds_probs_df =  getPreviousLabelingResults(exec_time=exec_time,which_dataset=which_dataset)
+    preds_probs_df =  getPreviousLabelingResults(exec_time=exec_time,which_dataset=which_dataset,filepath=zeroshot_data_local_path)
 
     # zeroshot_preds_and_probs_file = 'predictions_and_probabilities_test_{exec_time}.csv'.format(exec_time=exec_time)
     # preds_probs_df = pd.read_csv(zeroshot_data_local_path+zeroshot_preds_and_probs_file)
