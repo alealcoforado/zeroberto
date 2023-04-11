@@ -33,12 +33,30 @@ dict_classes_imdb = {
     1 : "negative"
     }
 
+dict_classes_dbpedia_14 = {
+    0:"Company",
+    1:"EducationalInstitution",
+    2:"Artist",
+    3:"Athlete",
+    4:'OfficeHolder',
+    5:'MeanOfTransportation',
+    6:'Building',
+    7:'NaturalPlace',
+    8:'Village',
+    9:'Animal',
+    10:'Plant',
+    11:'Album',
+    12:'Film',
+    13:'WrittenWork',
+   }
+
 def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
 
 def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
     implemented_datasets = ["ag_news","bbcnews","folhauol"]
+
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
         if test_only:
@@ -102,6 +120,21 @@ def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
 
         return dataset_df
 
+    if which_dataset == "dbpedia_14":
+        dataset = load_dataset("dbpedia_14")
+        if test_only:
+            dataset_df = pd.DataFrame(dataset['test'])
+        else:
+            dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
+            class_col = 'class'
+        data_col = 'content'
+        dataset_df[class_col] = dataset_df['label'].map(dict_classes_dbpedia_14)
+        dict_cols = {data_col: 'text', class_col: 'class'}
+        dataset_df = dataset_df.rename(columns=dict_cols) 
+
+        # print(dataset)
+        return dataset_df, 'text','class' 
+    
     print ("No dataset chosen. Options are {}.".format(implemented_datasets))
     return None
 
@@ -161,12 +194,9 @@ def splitDataset(raw_data, config,zeroshot_data_local_path=None):
             exec_time=config['exec_time'],zeroshot_data_local_path=zeroshot_data_local_path)
         
         # Split data into train set only
-        # train_data = raw_data[~raw_data['prediction_code'].isna()].groupby("prediction_code", group_keys=True)\
-        #     .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
-        # print(train_data.sum())
+
         train_data = zeroshot_previous_data.groupby("prediction_code", group_keys=True)\
             .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
-        # print(train_data.sum())
 
         # Rename columns and convert data types
         
