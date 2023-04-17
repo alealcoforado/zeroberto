@@ -56,7 +56,6 @@ class ZeroBERTo(nn.Module):
    # self.embeddingModel = SentenceTransformer("ricardo-filho/bert-base-portuguese-cased-nli-assin-2")
     self.hypothesis_template = config['template']
     self.labelEncoder = config['label_encoder']
-    print(1)
     self.queries = self.create_queries(self.classes,self.hypothesis_template)
     self.labeling_method = config['labeling_method']
     self.random_state = config['random_state']
@@ -79,19 +78,7 @@ class ZeroBERTo(nn.Module):
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
       if test_dataset==None:
         test_dataset = Dataset.from_dict(self.labeling_dataset[['text','class_code']].to_dict('list')),
-      # self.trainer = SetFitTrainer(
-      #   model=self.contrastiveModel,
-      #   train_dataset=train_dataset,
-      #   # eval_dataset=Dataset.from_dict(self.labeling_dataset[self.column_mapping.keys()].to_dict()),
-      #   eval_dataset = Dataset.from_dict(eval_data),
 
-      #   loss_class=CosineSimilarityLoss,
-      #   num_iterations=self.config["num_pairs"], # Number of text pairs to generate for contrastive learning
-      #   num_epochs=self.config["num_epochs"], # Number of epochs to use for contrastive learning
-      #   column_mapping = self.column_mapping, # NÃO mudar 
-      #   batch_size=self.config["batch_size"],
-      #   )
-      
       self.trainer = SetFitTrainer(
         model= self.contrastiveModel,
         train_dataset=train_dataset,
@@ -103,18 +90,29 @@ class ZeroBERTo(nn.Module):
         num_epochs=self.config["num_epochs"],
         )
       
-  def contrastive_train(self):
+  def contrastive_train(self,num_epochs=None,num_iterations=None,batch_size=None,train_dataset=None):
     if self.config['keep_body_frozen_setfit']:
       self.trainer.freeze() # Freeze the head
       # self.trainer.train() # Train only the body
       self.trainer.unfreeze(keep_body_frozen=self.config['keep_body_frozen_setfit'])
       print("freeze")
 
+    if num_iterations==None:
+        self.trainer.num_iterations = self.config['num_pairs']
+    if num_epochs==None:
+       num_epochs = self.config['num_epochs']
+    if batch_size==None:
+       batch_size = self.config['batch_size']
+    if type(train_dataset) == type(Dataset):
+       self.trainer.train_dataset = train_dataset
     self.trainer.train(
+      num_epochs = num_epochs,
+      batch_size = batch_size,
         # body_learning_rate=1e-5, # The body's learning rate
         # learning_rate=1e-2, # The head's learning rate
         # l2_weight=0.1, # Weight decay on **both** the body and head. If `None`, will use 0.01.
         )
+    self.config['self_training_epochs'] += 1
   
   def fit (self, sentences, batch_size = 8, epochs = 10):
     ##### Implementation of TSDAE - Unsupervised Learning for Transformers
@@ -192,12 +190,11 @@ class ZeroBERTo(nn.Module):
     return z
 
   def get_top_n_results(self,dataframe_results,ascending=False,top_n=1):
-      df_top_n = dataframe_results.sort_values(['top_probability','prediction'], ascending=ascending).groupby('prediction').head(top_n)
-      # print(df_top_n['top_probability'][:1])
+      df_top_n = dataframe_results.sort_values(['probability','prediction_code'], ascending=ascending).groupby('prediction_code').head(top_n)
       accuracy_top_n = evaluation_metrics.get_metric(df_top_n['prediction_code'].to_list(),df_top_n['class_code'].to_list())
       acc = "top {}: ".format(top_n) + str(accuracy_top_n)
       print(acc)
-      return 
+      return df_top_n
   
   def runLabeling(self):
     preds = []
@@ -239,7 +236,7 @@ class ZeroBERTo(nn.Module):
 
       print(final_result_df_encoded[['prediction_code','prediction']].drop_duplicates())
       # Concatenate encoded labels with probabilities
-      df_predictions_probs = pd.concat([final_result_df_encoded, pd.Series(prob_results, name='top_probability')], axis=1)
+      df_predictions_probs = pd.concat([final_result_df_encoded, pd.Series(prob_results, name='probability')], axis=1)
 
       # Get top n results
       for i in range(top_n):
@@ -247,7 +244,7 @@ class ZeroBERTo(nn.Module):
       self.get_top_n_results(df_predictions_probs, ascending=ascending, top_n=len(self.labeling_dataset))
 
       # Add prediction code and top probability columns to labeling dataset
-      cols_to_add = ['prediction_code', 'top_probability']
+      cols_to_add = ['prediction_code', 'probability']
       self.labeling_dataset = pd.concat([self.labeling_dataset.drop(columns=cols_to_add, errors='ignore'),
                                         df_predictions_probs[cols_to_add]], axis=1)
 
@@ -259,7 +256,6 @@ class ZeroBERTo(nn.Module):
   def resetContrastiveModel(self,model_id='sentence-transformers/stsb-xlm-r-multilingual'):
      self.contrastiveModel = SetFitModel.from_pretrained(model_id)
 
-     
   def saveLabelingResults(self,local_path = None):
      self.config['exec_time'] = evaluation_metrics.saveZeroshotResults(self.config,self.labeling_dataset,local_path=local_path)
 
@@ -270,11 +266,22 @@ class ZeroBERTo(nn.Module):
     
   #   raw_data_final, self.config['new_class_col'] = datasets_handler.mergeLabelingToDataset(
   #      raw_data,zeroshot_previous_data,self.config['class_col'])
-  def predict (self,documents):
+
+  def predict(self,documents,store_results=True):
     print("Predicting {} documents".format(len(documents)))
-    self.y_pred = self.contrastiveModel.predict(documents)
-    return self.y_pred
+    y_pred = self.contrastiveModel.predict(documents)
+    if store_results:
+      self.y_pred = y_pred
+    return y_pred  
   
+  def predict_proba(self,documents,store_results=True):
+    print("Predicting probabilities of {} documents".format(len(documents)))
+    y_probs = self.contrastiveModel.predict_proba(documents)
+    y_pred = (pd.DataFrame(y_probs).apply(lambda row: row.idxmax(),axis=1))
+    if store_results:
+      self.y_probs = y_probs
+      self.y_pred = y_pred
+    return y_probs
 
   def getPredictions(self):
     setfit_trainer = self.trainer
@@ -288,8 +295,31 @@ class ZeroBERTo(nn.Module):
     print("Running predictions on {} sentences.".format(len(x_test)))
     y_pred = setfit_trainer.model.predict(x_test)
     self.y_pred = y_pred #### xxx remover depois
-    # return y_pred 
-  
+    # return y_pred
+
+  def selectTrainingData(self,y_probs=None,
+                         method='top_n',top_n=8,evaluate=True,y_test=None):
+    if y_probs == None:
+       y_probs = self.y_probs
+    if method=='top_n':
+      preds = (pd.DataFrame(y_probs).apply(lambda row: row.idxmax(),axis=1))
+      top_probs = (pd.DataFrame(y_probs).apply(lambda row: row.max(),axis=1))
+      df = pd.concat([preds,top_probs],axis=1).rename(columns={0:'prediction_code',1:'probability'})
+      # print(df)
+      if evaluate:
+        df_eval = pd.concat([df,pd.Series(y_test)],axis=1).rename(columns={0:'class_code'})
+        for i in range(1,16+1):
+          self.get_top_n_results(df_eval,top_n=i)
+        self.get_top_n_results(df_eval,top_n=len(df_eval))
+      print("Data selected for training: ")
+      return self.get_top_n_results(df_eval,top_n=top_n)
+         
+         
+      # df_answers = pd.DataFrame(zip(pd.DataFrame(y_probs).apply(lambda row: row.idxmax(),axis=1),y_test),columns=['pred','y'])
+      # df_answers['right?'] = df_answers.apply(lambda row : row['pred']==row['y'],axis=1)
+      # df_top_n = df_answers.sort_values(by=['probability'],ascending=False).groupby('pred').head(8)
+      # print(df_top_n['right?'].sum()/len(df_top_n))
+        
 
 
 
