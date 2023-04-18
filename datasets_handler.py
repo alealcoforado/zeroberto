@@ -35,27 +35,26 @@ dict_classes_imdb = {
 
 dict_classes_dbpedia_14 = {
     0:"Company",
-    1:"EducationalInstitution",
+    1:"Educational Institution",
     2:"Artist",
     3:"Athlete",
-    4:'OfficeHolder',
-    5:'MeanOfTransportation',
+    4:'Office Holder',
+    5:'Mean Of Transportation',
     6:'Building',
-    7:'NaturalPlace',
+    7:'Natural Place',
     8:'Village',
     9:'Animal',
     10:'Plant',
     11:'Album',
     12:'Film',
-    13:'WrittenWork',
+    13:'Written Work',
    }
 
 def getAgora():
     return str(datetime.datetime.now().strftime("%Y_%m_%d__%H_%M_%S"))
 
-
 def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
-    implemented_datasets = ["ag_news","bbcnews","folhauol"]
+    implemented_datasets = ["ag_news","bbcnews","imdb","dbpedia_14","folhauol"]
 
     if which_dataset == "ag_news":
         dataset = load_dataset("ag_news")
@@ -76,7 +75,7 @@ def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
             dataset_df = pd.DataFrame(dataset['test'])
         else:
             dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
-            class_col = 'class'
+        class_col = 'class'
         data_col = 'text'
         dataset_df[class_col] = dataset_df['label'].map(dict_classes_imdb)
         dict_cols = {data_col: 'text', class_col: 'class'}
@@ -126,7 +125,7 @@ def getDataset(which_dataset,path=None,labelEncoder=None,test_only=False):
             dataset_df = pd.DataFrame(dataset['test'])
         else:
             dataset_df = pd.concat([pd.DataFrame(dataset['train']),pd.DataFrame(dataset['test'])]).reset_index()
-            class_col = 'class'
+        class_col = 'class'
         data_col = 'content'
         dataset_df[class_col] = dataset_df['label'].map(dict_classes_dbpedia_14)
         dict_cols = {data_col: 'text', class_col: 'class'}
@@ -165,8 +164,9 @@ def getZeroshotPreviousData(which_dataset,class_col,top_n = 8,exec_time=None,zer
     # zeroshot_config_file = 'zeroshot_config_test_{exec_time}.csv'.format(exec_time=exec_time)
     # config_df = pd.read_csv(zeroshot_data_local_path+zeroshot_config_file)
 
-    df_top_n = preds_probs_df.sort_values(['top_probability','prediction_code'], ascending=False).groupby('prediction_code').head(top_n)
+    df_top_n = preds_probs_df.sort_values(['probability','prediction_code'], ascending=False).groupby('prediction_code').head(top_n)
     df_top_n = df_top_n.drop(columns=["Unnamed: 0.1",class_col,class_col+"_code"],errors='ignore')
+
     return df_top_n
 
 def mergeLabelingToDataset(raw_data,previous_data,class_col):
@@ -193,19 +193,26 @@ def splitDataset(raw_data, config,zeroshot_data_local_path=None):
             config['dataset'],config['class_col'],top_n=config['top_n'],
             exec_time=config['exec_time'],zeroshot_data_local_path=zeroshot_data_local_path)
         
-        # Split data into train set only
+        ### Split data into train and "test" sets
 
-        train_data = zeroshot_previous_data.groupby("prediction_code", group_keys=True)\
-            .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))
-
-        # Rename columns and convert data types
+        train_data = zeroshot_previous_data.groupby("prediction_code")\
+            .apply(lambda s: s.sample(min(len(s), config['training_examples']), random_state=random_state))\
+        .reset_index(level=0,drop=True)
         
+        ### Remove train_data examples from test_data to avoid re-picking these as training data for future trainings
+
+        train_indexes = list(train_data.index)
+        # i1 = raw_data.set_index(keys).index
+        # i2 = train_data.set_index(keys).index
+        test_data = raw_data.loc[~raw_data.index.isin(train_indexes)]
+
+        # ### Rename columns and convert data types
         train_data = train_data.drop(columns='class_code',errors='ignore').rename(columns={'prediction_code': 'class_code'})
-        train_data[data_col] = train_data[data_col].apply(str)
-        # train_data['class_code'] = train_data['class_code'].apply(int)
-        test_data = raw_data
-        test_data[data_col] = test_data[data_col].apply(str)
-        test_data['class_code'] = test_data['class_code'].apply(int)
+        train_data[data_col] = train_data[data_col].astype(str)
+
+        # test_data = raw_data
+        test_data[data_col] = test_data[data_col].astype(str)
+        test_data['class_code'] = test_data['class_code'].astype(int)
 
 
     if how == 'fewshot': 
@@ -224,9 +231,14 @@ def splitDataset(raw_data, config,zeroshot_data_local_path=None):
        
     return train_data[[data_col,'class_code']],test_data[[data_col,'class_code']]
 
-
-def buildDatasetDict(df_train,df_test):
-    test_dataset = Dataset.from_dict(df_test[['text','class_code']].to_dict('list'))
+def buildDatasetDict(df_train,df_test=None):
+    # if df_test.any(None):# == None:
+    #     print("none")
+    #     test_dataset = None
+    if type(df_test) != type(pd.DataFrame()):
+        test_dataset = None
+    else:
+        test_dataset = Dataset.from_dict(df_test[['text','class_code']].to_dict('list'))
     train_dataset = Dataset.from_dict(df_train[['text','class_code']].to_dict('list'))
     # dataset_dict = datasets.DatasetDict({"train":train_dataset,"test":test_dataset})
     return train_dataset,test_dataset
