@@ -38,7 +38,9 @@ class ZeroBERTo(nn.Module):
               labeling_method='dotproduct',config=None):
     
     super(ZeroBERTo, self).__init__()
-#    self.embeddingModel = SentenceTransformer('sentence-transformers/nli-roberta-base-v2')
+
+    self.config = config
+
     if embeddingModel == None:
        self.embeddingModel = SentenceTransformer(config['similarity_model'],device=getDevice())
     else: self.embeddingModel = SentenceTransformer(embeddingModel,device=device)
@@ -69,12 +71,22 @@ class ZeroBERTo(nn.Module):
     #   self.clusterModel = KMeans(n_clusters=len(self.classes), n_init=1,
     #                               init=self.initial_centroids,max_iter = 600, random_state=self.random_state)
     # else: self.clusterModel = clusterModel
-    self.config = config
     self.softmax = nn.Softmax(dim=1).to(device)
     print(4)
 
-  def buildTrainer(self,train_dataset,test_dataset=None):
+  def setContrastiveModel(self,model=None):
+    if model==None:
+        self.contrastiveModel = SetFitModel.from_pretrained(self.config['setfit_model'],)
+    else:
+        self.contrastiveModel = model
+
+  def resetContrastiveModel(self,model=None):
+     self.setContrastiveModel(model)
+
+  def buildTrainer(self,train_dataset,test_dataset=None,reset_model=False):
       
+      if reset_model==True:
+        self.resetContrastiveModel()# = SetFitModel.from_pretrained(self.config['setfit_model'])
       self.column_mapping = {self.config['data_col']: "text", 'class_code': "label"}
       if test_dataset==None:
         test_dataset = Dataset.from_dict(self.labeling_dataset[['text','class_code']].to_dict('list')),
