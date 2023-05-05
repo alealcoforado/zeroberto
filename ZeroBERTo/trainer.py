@@ -6,6 +6,8 @@ from sentence_transformers import InputExample, losses
 from sentence_transformers.datasets import SentenceLabelDataset
 from sentence_transformers.losses.BatchHardTripletLoss import BatchHardTripletLossDistanceFunction
 from torch.utils.data import DataLoader
+import torch
+import evaluate
 from tqdm.auto import trange
 from transformers.trainer_utils import set_seed
 
@@ -96,6 +98,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
             show_progress_bar: bool = True,
             reset_model_head: bool = True,
+            return_history: bool = False,
     ):
         """
         Main training entry point.
@@ -133,9 +136,13 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         self._validate_column_mapping(self.train_dataset)
         train_dataset = self.train_dataset
+        eval_dataset = self.eval_dataset
+
         if self.column_mapping is not None:
             logger.info("Applying column mapping to training dataset")
             train_dataset = self._apply_column_mapping(self.train_dataset, self.column_mapping)
+            if eval_dataset:
+                eval_dataset = self._apply_column_mapping(self.eval_dataset, self.column_mapping)
 
         #x_train = train_dataset["text"]
         #y_train = train_dataset["label"]
@@ -224,28 +231,65 @@ class ZeroBERToTrainer(SetFitTrainer):
                     show_progress_bar=True,
                 )
 
+        training_history = []
+
+        # Check if there is labels
+        labels = train_dataset["label"] if "label" in train_dataset else None
+
         # Run First Shot
         if self.model.first_shot_model:
             probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
+            if return_history and labels:
+                y_pred = torch.argmax(probs)
+                training_history.append({"first_shot":self._predict_metrics(y_pred, labels)})
+
         else:
             # Throws error
-            pass
-
-        # Check if there is labels
-        labels = train_dataset["label"] if "label" in train_dataset else None
+            raise RuntimeError("ZeroBERTo training requires a first shot model")
 
         # Iterations of setfit
         for i in range(num_setfit_iterations):
             logger.info(f"********** Running SetFit Iteration {i+1} **********")
             x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=self.samples_per_label)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the selection
+            if return_history and labels:
+                training_history.append({f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)})
             train_setfit_iteration()
             probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
+            if return_history and labels:
+                y_pred = torch.argmax(probs)
+                training_history.append({f"setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)})
+                if eval_dataset and eval_dataset["label"]:
+                    test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
+                    y_pred = torch.argmax(test_probs)
+                    training_history.append({f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])})
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head:
                 self.model.reset_model_head()
+
+        return training_history if return_history else None
+
+    def _predict_metrics(self, predictions, references):
+        """
+        Computes the metrics for the self.model classifier.
+        Returns:
+            `Dict[str, float]`: The evaluation metrics.
+        """
+
+        if isinstance(self.metric, str):
+            metric_config = "multilabel" if self.model.multi_target_strategy is not None else None
+            metric_fn = evaluate.load(self.metric, config_name=metric_config)
+            metric_kwargs = self.metric_kwargs or {}
+
+            return metric_fn.compute(predictions=predictions, references=references, **metric_kwargs)
+
+        elif callable(self.metric):
+            return self.metric(predictions, references)
+
+        else:
+            raise ValueError("metric must be a string or a callable")
 
 
 
