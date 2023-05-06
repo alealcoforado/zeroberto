@@ -56,8 +56,11 @@ class FirstShotModel(nn.Module):
     def forward(self, x, return_embeddings=False):
         doc_emb = self.embedding_model.encode(x, convert_to_tensor=True, normalize_embeddings=self.normalize_embeddings,
                                              device=self.device)
-        logits = torch.sum(doc_emb * self.queries, axis=-1)
-        z = self.softmax(logits.unsqueeze(0))
+        stacked_tensors=[]
+        for i in range(self.queries.shape[0]):
+            stacked_tensors.append(torch.sum(doc_emb * self.queries[i], axis=-1)) # Hadamard product (element-wise)
+        logits = torch.stack(stacked_tensors, dim=-1)
+        z = self.softmax(logits)
         return (z, doc_emb) if return_embeddings else z
 
     def _create_queries(self, classes_list, hypothesis):
@@ -110,6 +113,7 @@ class ZeroBERToDataSelector:
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
         top_prob, index = torch.topk(probabilities, k=n, dim=0)
+        top_prob, index = top_prob.T, index.T
         n_classes = probabilities.shape[-1]
         x_train = []
         y_train = []

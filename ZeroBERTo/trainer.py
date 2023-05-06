@@ -156,6 +156,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         learning_rate = learning_rate or self.learning_rate
 
         def train_setfit_iteration():
+            setfit_batch_size = batch_size
             if not self.model.has_differentiable_head or self._freeze:
                 # sentence-transformers adaptation
                 if self.loss_class in [
@@ -168,8 +169,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                     train_examples = [InputExample(texts=[text], label=label) for text, label in zip(x_train, y_train)]
                     train_data_sampler = SentenceLabelDataset(train_examples, samples_per_label=self.samples_per_label)
 
-                    batch_size = min(batch_size, len(train_data_sampler))
-                    train_dataloader = DataLoader(train_data_sampler, batch_size=batch_size, drop_last=True)
+                    setfit_batch_size = min(batch_size, len(train_data_sampler))
+                    train_dataloader = DataLoader(train_data_sampler, batch_size=setfit_batch_size, drop_last=True)
 
                     if self.loss_class is losses.BatchHardSoftMarginTripletLoss:
                         train_loss = self.loss_class(
@@ -197,7 +198,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                                 np.array(x_train), np.array(y_train), train_examples
                             )
 
-                    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)
+                    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=setfit_batch_size)
                     train_loss = self.loss_class(self.model.model_body)
 
                 total_train_steps = len(train_dataloader) * num_epochs
@@ -205,7 +206,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 logger.info(f"  Num examples = {len(train_examples)}")
                 logger.info(f"  Num epochs = {num_epochs}")
                 logger.info(f"  Total optimization steps = {total_train_steps}")
-                logger.info(f"  Total train batch size = {batch_size}")
+                logger.info(f"  Total train batch size = {setfit_batch_size}")
 
                 warmup_steps = math.ceil(total_train_steps * self.warmup_proportion)
                 self.model.model_body.fit(
@@ -219,11 +220,12 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             if not self.model.has_differentiable_head or not self._freeze:
                 # Train the final classifier
+                print("Training head")
                 self.model.fit(
                     x_train,
                     y_train,
                     num_epochs=num_epochs,
-                    batch_size=batch_size,
+                    batch_size=setfit_batch_size,
                     learning_rate=learning_rate,
                     body_learning_rate=body_learning_rate,
                     l2_weight=l2_weight,
@@ -234,14 +236,15 @@ class ZeroBERToTrainer(SetFitTrainer):
         training_history = []
 
         # Check if there is labels
-        labels = train_dataset["label"] if "label" in train_dataset else None
+        labels = train_dataset["label"] if "label" in train_dataset.features else None
+        eval_labels = eval_dataset["label"] if "label" in eval_dataset.features else None
 
         # Run First Shot
         if self.model.first_shot_model:
             probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
-                y_pred = torch.argmax(probs)
+                y_pred = torch.argmax(probs, axis=-1)
                 training_history.append({"first_shot":self._predict_metrics(y_pred, labels)})
 
         else:
@@ -259,11 +262,14 @@ class ZeroBERToTrainer(SetFitTrainer):
             probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
-                y_pred = torch.argmax(probs)
-                training_history.append({f"setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)})
-                if eval_dataset and eval_dataset["label"]:
+                y_pred = torch.argmax(probs, axis=-1)
+                training_history.append({f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)})
+                current_probs = self.model.predict_proba(x_train, return_embeddings=False)
+                current_pred = torch.argmax(current_probs, axis=-1)
+                training_history.append({f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)})
+                if eval_dataset and eval_labels:
                     test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
-                    y_pred = torch.argmax(test_probs)
+                    y_pred = torch.argmax(test_probs, axis=-1)
                     training_history.append({f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])})
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head:
