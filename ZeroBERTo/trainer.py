@@ -272,7 +272,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     y_pred = torch.argmax(test_probs, axis=-1)
                     training_history.append({f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])})
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
-            if reset_model_head:
+            if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
 
         return training_history if return_history else None
