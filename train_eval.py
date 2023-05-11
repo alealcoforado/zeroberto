@@ -49,8 +49,21 @@ def arg_parse() -> argparse.Namespace:
         "--use_differentiable_head", type=bool, help="Use Differentiable head", default=False
     )
     parser.add_argument(
+        "--num_iterations", type=int, help="Number of pairs to generate on training.", default=20
+    )
+    parser.add_argument(
+        "--num_setfit_iterations", type=int, help="Number of SetFit training iterations to perform", default=2
+    )   
+    parser.add_argument(
+        "--num_epochs", type=int, help="Number of self-training loop iterations to perform", default=1
+    )  
+    parser.add_argument(
+        "--samples_per_label", type=int, help="Number of samples per class to pick for training", default=4
+    )   
+    parser.add_argument(
         "--normalize_embeddings", type=bool, help="Normalize Embeddings", default=False
     )
+
     args = parser.parse_args()
     return args
 
@@ -61,11 +74,20 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,100))
-    args.dataset_test_split = "validation" # TO DO remove
-    test_dataset = dataset[args.dataset_test_split]
+    train_dataset = dataset[args.dataset_train_split].select(range(0,5000))
+    args.dataset_test_split = "test" # TO DO remove
+    test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
-    classes_list = ["negative", "positive"] # TO DO
+    if args.dataset=='sst-2':
+        classes_list = ["negative", "positive"] # TO DO
+    elif args.dataset=='ag_news':
+        classes_list = ["world","sports","business","science and technology"]
+    #     dict_classes_ag_news = {
+    #     0:"world",
+    #     1:"sports",
+    #     2:"business",
+    #     3:"science and technology"
+    # }
 
     # Load the model
     model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
@@ -95,12 +117,12 @@ def main():
         eval_dataset=test_dataset,
         metric=compute_metrics_fn,
         loss_class=CosineSimilarityLoss,
-        num_iterations=20,
-        num_setfit_iterations=1,
-        num_epochs=2,
+        num_iterations=args.num_iterations,
+        num_setfit_iterations=args.num_setfit_iterations,
+        num_epochs=args.num_epochs,
         seed=42,
-        column_mapping={"sentence": "text", "label": "label"},
-        samples_per_label=4,
+        column_mapping={"text": "text", "label": "label"},
+        samples_per_label=args.samples_per_label,
     )
 
     # Body training
