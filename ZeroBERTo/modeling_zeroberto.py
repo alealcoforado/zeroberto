@@ -108,6 +108,9 @@ class ZeroBERToDataSelector:
     def __call__(self, text_list, probabilities, embeddings, labels=None, n=8):
         if self.selection_strategy == "top_n":
             return self._get_top_n_data(text_list, probabilities, labels, n)
+        if self.selection_strategy == "intraclass_clustering":
+
+            return self._get_intraclass_clustering_data(text_list, probabilities, labels, n)
 
     def _get_top_n_data(self, text_list, probabilities,labels,n):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
@@ -126,6 +129,8 @@ class ZeroBERToDataSelector:
                     labels_train.append(labels[ind])
         return x_train, y_train, labels_train
 
+    # def _get_intraclass_clustering_data(self,text_list,probabilities,labels,n)
+        
 class ZeroBERToModel(SetFitModel):
     """A ZeroBERTo model with integration to the Hugging Face Hub. """
 
