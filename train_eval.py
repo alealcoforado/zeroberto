@@ -75,19 +75,17 @@ def main():
     # Open the dataset
     dataset = load_dataset(args.dataset)
     train_dataset = dataset[args.dataset_train_split].select(range(0,5000))
-    args.dataset_test_split = "test" # TO DO remove
+    # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
     if args.dataset=='sst-2':
         classes_list = ["negative", "positive"] # TO DO
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
-    #     dict_classes_ag_news = {
-    #     0:"world",
-    #     1:"sports",
-    #     2:"business",
-    #     3:"science and technology"
-    # }
+    elif args.dataset=='SetFit/sst5':
+        classes_list = ["very negative","negative","neutral","positive","very positive"]
+    elif args.dataset=='SetFit/emotion':
+        classes_list = ['sadness','joy','love','anger','fear','surprise']
 
     # Load the model
     model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
@@ -134,8 +132,6 @@ def main():
 
     final_metrics = trainer.evaluate()
     print(final_metrics)
-
-
 
 
 if __name__ == '__main__':
