@@ -240,6 +240,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         eval_labels = eval_dataset["label"] if "label" in eval_dataset.features else None
 
         # Run First Shot
+        logger.info(f"Running First-Shot on {len(train_dataset['text'])} documents.")
         if self.model.first_shot_model:
             probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
@@ -255,7 +256,10 @@ class ZeroBERToTrainer(SetFitTrainer):
         for i in range(num_setfit_iterations):
             logger.info(f"********** Running SetFit Iteration {i+1} **********")
             x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=self.samples_per_label)
-            # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the selection
+            # print(list(zip(x_train,y_train,labels_train)))
+            # print(type(x_train),type(y_train),type(labels_train))
+            # print(len(x_train),len(y_train),len(labels_train))
+            # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
                 training_history.append({f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)})
             train_setfit_iteration()

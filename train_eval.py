@@ -63,7 +63,12 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--normalize_embeddings", type=bool, help="Normalize Embeddings", default=False
     )
-
+    parser.add_argument(
+        "--selection_strategy", type=str, help="How Data Selector should pick training data", default='top_n'
+    )
+    parser.add_argument(
+        "--batch_size", type=int, help="Batch size for GPU", default=8
+    )
     args = parser.parse_args()
     return args
 
@@ -74,7 +79,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,5000))
+    train_dataset = dataset[args.dataset_train_split].select(range(1000,1100))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -106,7 +111,7 @@ def main():
     compute_metrics_fn = partial(compute_metrics, metrics=metrics)
 
     # Set up Data Selector
-    data_selector = ZeroBERToDataSelector(selection_strategy="top_n")
+    data_selector = ZeroBERToDataSelector(selection_strategy=args.selection_strategy)
 
     print("Start training")
 
@@ -124,6 +129,7 @@ def main():
         seed=42,
         column_mapping={"text": "text", "label": "label"},
         samples_per_label=args.samples_per_label,
+        batch_size=args.batch_size
     )
 
     # Body training
