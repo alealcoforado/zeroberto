@@ -207,7 +207,11 @@ class ZeroBERToDataSelector:
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
             clusterer_model = hdbscan.HDBSCAN(leaf_size=leaf_size, min_cluster_size=min_cluster_size)
-
+        tensor_embeddings = [] # TO DO melhorar
+        for emb in embeddings: # TO DO melhorar
+          tensor_embeddings.append(torch.Tensor(emb))# TO DO melhorar
+        embeddings = np.array(torch.stack((tensor_embeddings)).cpu())
+        
         embeddings = np.array(torch.stack(embeddings).cpu())
         clusters = clusterer_model.fit_predict(embeddings)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
