@@ -134,10 +134,9 @@ class ZeroBERToDataSelector:
     
     def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
-        # print(len(embeddings))
-        df_probs = pd.DataFrame(probabilities)
-        label_results = df_probs.apply(lambda row: row.idxmax(),  axis=1).to_list()
-        prob_results = df_probs.apply(lambda row: row.max(), axis=1).to_list()
+        
+        label_results = [np.argmax(lista) for lista in (np.array(probabilities.cpu()))]
+        prob_results = [np.max(lista) for lista in (np.array(probabilities.cpu()))]
 
         unique_labels = list(set(label_results))
         unique_labels.sort()
@@ -209,7 +208,7 @@ class ZeroBERToDataSelector:
         if clusterer=='hdbscan':
             clusterer_model = hdbscan.HDBSCAN(leaf_size=leaf_size, min_cluster_size=min_cluster_size)
 
-        embeddings = np.array(torch.stack(embeddings))
+        embeddings = np.array(torch.stack(embeddings).cpu())
         clusters = clusterer_model.fit_predict(embeddings)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         print(f"Found {len(list(set(clusters)))} clusters.")

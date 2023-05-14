@@ -240,13 +240,15 @@ class ZeroBERToTrainer(SetFitTrainer):
         eval_labels = eval_dataset["label"] if "label" in eval_dataset.features else None
 
         # Run First Shot
-        logger.info(f"Running First-Shot on {len(train_dataset['text'])} documents.")
+        print(f"Running First-Shot on {len(train_dataset['text'])} documents.")
         if self.model.first_shot_model:
             probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
-                training_history.append({"first_shot":self._predict_metrics(y_pred, labels)})
+                current_metric = {"first_shot":self._predict_metrics(y_pred, labels)}
+                print(current_metric)
+                training_history.append(current_metric)
 
         else:
             # Throws error
@@ -254,27 +256,36 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         # Iterations of setfit
         for i in range(num_setfit_iterations):
-            logger.info(f"********** Running SetFit Iteration {i+1} **********")
+            print(f"********** Running SetFit Iteration {i+1} **********")
             x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=self.samples_per_label)
             # print(list(zip(x_train,y_train,labels_train)))
             # print(type(x_train),type(y_train),type(labels_train))
             # print(len(x_train),len(y_train),len(labels_train))
             # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
-                training_history.append({f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)})
+                current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
+                print(current_metric)
+                training_history.append(current_metric)
             train_setfit_iteration()
             probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
-                training_history.append({f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)})
+                current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)}
+                print(current_metric)
+                training_history.append(current_metric)
+
                 current_probs = self.model.predict_proba(x_train, return_embeddings=False)
                 current_pred = torch.argmax(current_probs, axis=-1)
-                training_history.append({f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)})
+                current_metric = {f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)}
+                print(current_metric)
+                training_history.append()
                 if eval_dataset and eval_labels:
                     test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
                     y_pred = torch.argmax(test_probs, axis=-1)
-                    training_history.append({f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])})
+                    current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])}
+                    print(current_metric)
+                    training_history.append(current_metric)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
