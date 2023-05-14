@@ -195,11 +195,11 @@ class ZeroBERToDataSelector:
 
         flat_selected_data = [item for sublist in all_labels_selected_data for item in sublist]
 
-        probs,train_indices,true_labels,train_labels,texts = zip(*flat_selected_data)
+        probs,train_indices,true_labels,predicted_labels,texts = zip(*flat_selected_data)
 
         x_train = texts
-        y_train = true_labels
-        labels_train = train_labels 
+        y_train = predicted_labels 
+        labels_train = true_labels
 
         print("Data Selected:",len(x_train))
         return x_train, y_train, labels_train

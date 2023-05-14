@@ -96,7 +96,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             l2_weight: Optional[float] = None,
             max_length: Optional[int] = None,
             trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
-            show_progress_bar: bool = True,
+            show_progress_bar: bool = False,
             reset_model_head: bool = True,
             return_history: bool = False,
     ):
