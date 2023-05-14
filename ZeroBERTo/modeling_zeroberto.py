@@ -211,8 +211,6 @@ class ZeroBERToDataSelector:
         for emb in embeddings: # TO DO melhorar
           tensor_embeddings.append(torch.Tensor(emb))# TO DO melhorar
         embeddings = np.array(torch.stack((tensor_embeddings)).cpu())
-        
-        embeddings = np.array(torch.stack(embeddings).cpu())
         clusters = clusterer_model.fit_predict(embeddings)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         print(f"Found {len(list(set(clusters)))} clusters.")
