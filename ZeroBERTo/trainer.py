@@ -279,7 +279,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 current_pred = torch.argmax(current_probs, axis=-1)
                 current_metric = {f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)}
                 print(current_metric)
-                training_history.append()
+                training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
                     y_pred = torch.argmax(test_probs, axis=-1)
