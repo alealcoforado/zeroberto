@@ -75,7 +75,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.var_samples_per_label = var_samples_per_label
         if self.var_samples_per_label is not None:
             assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
-            print("Asserting: len(var_samples) = ",len(var_samples_per_label))
+            # print("Asserting: len(var_samples) = ",len(var_samples_per_label))
         if model is None:
             if model_init is not None:
                 model = self.call_model_init()
