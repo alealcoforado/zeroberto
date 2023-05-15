@@ -171,6 +171,7 @@ class ZeroBERToDataSelector:
                 this_cluster_label_results = [this_label_label_results[i] for i in this_cluster_indexes]
                 zipped_lists = (list(zip(this_cluster_probs,this_cluster_indexes,this_cluster_true_labels,this_cluster_label_results,this_cluster_texts)))
                 zipped_lists.sort(reverse=True)
+                print(f"Cluster {cluster}: {len(this_cluster_indexes)} documents assigned")
                 # print(zipped_lists)
 
                 all_clusters_sorted_lists.append(zipped_lists)
@@ -201,7 +202,6 @@ class ZeroBERToDataSelector:
         y_train = predicted_labels 
         labels_train = true_labels
 
-        print("Data Selected:",len(x_train))
         return x_train, y_train, labels_train
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):

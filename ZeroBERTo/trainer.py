@@ -47,6 +47,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             distance_metric: Callable = BatchHardTripletLossDistanceFunction.cosine_distance,
             margin: float = 0.25,
             samples_per_label: int = 2,
+            var_samples_per_label: list = None,
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
             raise ValueError(
@@ -71,7 +72,10 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.distance_metric = distance_metric
         self.margin = margin
         self.samples_per_label = samples_per_label
-
+        self.var_samples_per_label = var_samples_per_label
+        if self.var_samples_per_label is not None:
+            assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
+            print("Asserting: len(var_samples) = ",len(var_samples_per_label))
         if model is None:
             if model_init is not None:
                 model = self.call_model_init()
@@ -99,6 +103,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             show_progress_bar: bool = False,
             reset_model_head: bool = True,
             return_history: bool = False,
+            var_samples_per_label: list = None,
     ):
         """
         Main training entry point.
@@ -125,6 +130,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 The trial run or the hyperparameter dictionary for hyperparameter search.
             show_progress_bar (`bool`, *optional*, defaults to `True`):
                 Whether to show a bar that indicates training progress.
+            var_samples_per_label (`list`, *optional*, defaults to `None`):
+                A list of integers containing the roadmap for the Data Selector. Needs to have length = num_setfit_iterations. Overrides samples_per_label.
+                If None, will use samples_per_label.
         """
         set_seed(self.seed)  # Seed must be set before instantiating the model when using model_init.
 
@@ -253,11 +261,18 @@ class ZeroBERToTrainer(SetFitTrainer):
         else:
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
-
+        # print(var_samples_per_label)
+        # var_samples_per_label = [el for sublist in var_samples_per_label for el in sublist] if var_samples_per_label is not None else None
+        # print(var_samples_per_label)
+        samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
+        
+        print(f"Data Selector roadmap: {samples_per_label_roadmap}")
         # Iterations of setfit
         for i in range(num_setfit_iterations):
             print(f"********** Running SetFit Iteration {i+1} **********")
-            x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=self.samples_per_label)
+            x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=samples_per_label_roadmap[i])
+            print("Data Selected:",len(x_train))
+
             # print(list(zip(x_train,y_train,labels_train)))
             # print(type(x_train),type(y_train),type(labels_train))
             # print(len(x_train),len(y_train),len(labels_train))

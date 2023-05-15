@@ -69,6 +69,10 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--batch_size", type=int, help="Batch size for GPU", default=8
     )
+    parser.add_argument(
+        "--var_samples_per_label", type=list, nargs="*", default=None
+    )
+
     args = parser.parse_args()
     return args
 
@@ -79,7 +83,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,5000))
+    train_dataset = dataset[args.dataset_train_split].select(range(0,100))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -115,6 +119,10 @@ def main():
 
     print("Start training")
 
+    # print(args.var_samples_per_label)
+    args.var_samples_per_label = [int(el) for sublist in args.var_samples_per_label for el in sublist]
+    print(args.var_samples_per_label)
+
     # Build trainer
     trainer = ZeroBERToTrainer(
         model=model,
@@ -129,7 +137,8 @@ def main():
         seed=42,
         column_mapping={"text": "text", "label": "label"},
         samples_per_label=args.samples_per_label,
-        batch_size=args.batch_size
+        batch_size=args.batch_size,
+        var_samples_per_label=args.var_samples_per_label
     )
 
     # Body training
