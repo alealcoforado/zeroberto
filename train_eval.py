@@ -96,7 +96,7 @@ def main():
     elif args.dataset=='SetFit/emotion':
         classes_list = ['sadness','joy','love','anger','fear','surprise']
     elif args.dataset=='SetFit/enron_spam':
-        classes_list = ['not spam','spam']
+        classes_list = ['ham','spam']
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
 
