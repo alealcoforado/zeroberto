@@ -97,7 +97,8 @@ def main():
         classes_list = ['sadness','joy','love','anger','fear','surprise']
     elif args.dataset=='SetFit/enron_spam':
         classes_list = ['ham','spam']
-
+    elif args.dataset=='SetFit/CR':
+        classes_list = ['negative','positive']
 
     # Load the model
     model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
