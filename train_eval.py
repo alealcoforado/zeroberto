@@ -91,6 +91,8 @@ def main():
         classes_list = ["negative", "positive"] # TO DO
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
+    elif args.dataset=='SetFit/ag_news':
+        classes_list = ["world","sports","business","science and technology"]
     elif args.dataset=='SetFit/sst5':
         classes_list = ["very negative","negative","neutral","positive","very positive"]
     elif args.dataset=='SetFit/emotion':
