@@ -83,7 +83,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 100)))
+    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
