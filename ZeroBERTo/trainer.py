@@ -255,7 +255,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
                 current_metric = {"first_shot":self._predict_metrics(y_pred, labels)}
-                print(current_metric)
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
 
         else:
@@ -279,7 +279,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
                 current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
-                print(current_metric)
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+
                 training_history.append(current_metric)
             train_setfit_iteration()
             probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
@@ -287,19 +288,19 @@ class ZeroBERToTrainer(SetFitTrainer):
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
                 current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)}
-                print(current_metric)
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
 
                 current_probs = self.model.predict_proba(x_train, return_embeddings=False)
                 current_pred = torch.argmax(current_probs, axis=-1)
                 current_metric = {f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)}
-                print(current_metric)
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
                     y_pred = torch.argmax(test_probs, axis=-1)
                     current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])}
-                    print(current_metric)
+                    print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and i+1 < num_setfit_iterations:
