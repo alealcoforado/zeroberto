@@ -146,47 +146,47 @@ class ZeroBERToDataSelector:
 
         selected_data = []
         for label in range(probabilities.shape[-1]):
-            this_label_selected_data = []
+            label_selected_data = []
 
             # Retrieve indices for label
-            this_label_indexes = (label_results == label).nonzero().squeeze()
-            if len(this_label_indexes) < n:
-                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(this_label_indexes)}")
+            label_indices = (label_results == label).nonzero().squeeze()
+            if len(label_indices) < n:
+                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(label_indexes)}")
                 # Throws error
                 break
 
-            this_label_embeddings = embeddings[this_label_indexes]
+            label_embeddings = embeddings[label_indices]
 
 
             print("Clustering class {}.".format(label))
 
-            this_label_clusters = self._clusterer_fit_predict(clusterer, this_label_embeddings, leaf_size, min_cluster_size) 
+            label_clusters = self._clusterer_fit_predict(clusterer, label_embeddings, leaf_size, min_cluster_size) 
 
-            unique_clusters = list(set(this_label_clusters))
+            unique_clusters = list(set(label_clusters))
             unique_clusters.sort() # Here should be sorted by density, no? - TO DO
 
             clustered_docs = {}
 
             # sort docs by probabilities for each cluster found
             for cluster in unique_clusters:
-                this_cluster_indexes = this_label_indexes[(this_label_clusters == cluster).nonzero().squeeze()]
-                this_cluster_probs = prob_results[this_cluster_indexes]
-                this_cluster_probs, cluster_probs_sorted_ind = torch.sort(this_cluster_probs, descending=True)
-                this_cluster_indexes = this_cluster_indexes[cluster_probs_sorted_ind]
+                cluster_indices = label_indices[(label_clusters == cluster).nonzero().squeeze()]
+                cluster_probs = prob_results[cluster_indices]
+                cluster_probs, cluster_probs_sorted_ind = torch.sort(cluster_probs, descending=True)
+                cluster_indices = cluster_indices[cluster_probs_sorted_ind]
 
-                clustered_docs[cluster] = [item for item in this_cluster_indexes.tolist() if item not in discard_indices]
+                clustered_docs[cluster] = [item for item in cluster_indices.tolist() if item not in discard_indices]
 
             # selects data iteratively, 1 from each cluster from biggest to smallest cluster, 
             # following highest probability order inside each cluster
-            while len(this_label_selected_data) < n:
+            while len(label_selected_data) < n:
                 for cluster in unique_clusters:
                     if len(clustered_docs[cluster]) > 0:
                         selected_element = clustered_docs[cluster].pop(0)
-                        this_label_selected_data.append(selected_element)
-                        if len(this_label_selected_data) == n:
+                        label_selected_data.append(selected_element)
+                        if len(label_selected_data) == n:
                             break
 
-            selected_data.append(this_label_selected_data)
+            selected_data.append(label_selected_data)
 
         selected_data = [item for sublist in selected_data for item in sublist]
 
