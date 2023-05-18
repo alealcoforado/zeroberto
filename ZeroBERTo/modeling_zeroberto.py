@@ -109,29 +109,34 @@ class ZeroBERToDataSelector:
     def __init__(self, selection_strategy="top_n"):
         self.selection_strategy = selection_strategy
 
-    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8):
+    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = []):
         if self.selection_strategy == "top_n":
-            return self._get_top_n_data(text_list, probabilities, labels, n)
+            return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
         if self.selection_strategy == "intraclass_clustering":
             # print("Len text and embeds:",len(text_list),len(embeddings))
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n)
 
-    def _get_top_n_data(self, text_list, probabilities,labels,n):
+    def _get_top_n_data(self, text_list, probabilities,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
-        top_prob, index = torch.topk(probabilities, k=n, dim=0)
+        probs = probabilities.copy()
+        if len(discard_indices) > 0:
+            # Set discard item probabilities to -1.0
+            probs[discard_indices] = -1.0*torch.ones(len(discard_indices), probs.shape[-1])
+        top_prob, index = torch.topk(probs, k=n, dim=0)
         top_prob, index = top_prob.T, index.T
-        n_classes = probabilities.shape[-1]
         x_train = []
         y_train = []
         labels_train = []
+        training_indices = []
         for i in range(len(index)):
             for ind in index[i]:
                 y_train.append(i)
                 x_train.append(text_list[ind])
                 if labels:
                     labels_train.append(labels[ind])
-        return x_train, y_train, labels_train
+                training_indices.append(ind)
+        return x_train, y_train, labels_train, training_indices
     
     def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
