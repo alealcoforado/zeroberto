@@ -95,6 +95,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.hp_search_backend = None
         self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
         self.freeze_head = freeze_head
+        print(self.freeze_head)
     def train(
             self,
             num_epochs: Optional[int] = None,

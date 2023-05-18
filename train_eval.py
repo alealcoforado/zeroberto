@@ -82,7 +82,7 @@ def arg_parse() -> argparse.Namespace:
         "--num_body_epochs", type=int, default=1
     )
     parser.add_argument(
-        "--freeze_head", type=bool, help="If True, will train body only.", default=True
+        "--freeze_head", type=bool, help="If True, will train body only.", default=False
     )
     args = parser.parse_args()
     return args
@@ -94,7 +94,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
+    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 10)))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -134,7 +134,7 @@ def main():
 
     print("Start training")
 
-    # print(args.var_samples_per_label)
+    print(args.freeze_head)
 
     # Build trainer
     trainer = ZeroBERToTrainer(
