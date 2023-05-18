@@ -138,9 +138,10 @@ class ZeroBERToDataSelector:
                 training_indices.append(ind)
         return x_train, y_train, labels_train, training_indices
     
-    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
+    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
 
+        discard_indices = set(discard_indices)
         prob_results, label_results = torch.max(probabilities, axis=-1)
 
         selected_data = []
@@ -173,7 +174,7 @@ class ZeroBERToDataSelector:
                 this_cluster_probs, cluster_probs_sorted_ind = torch.sort(this_cluster_probs, descending=True)
                 this_cluster_indexes = this_cluster_indexes[cluster_probs_sorted_ind]
 
-                clustered_docs[cluster] = this_cluster_indexes.tolist()
+                clustered_docs[cluster] = [item for item in this_cluster_indexes.tolist() if item not in discard_indices]
 
             # selects data iteratively, 1 from each cluster from biggest to smallest cluster, 
             # following highest probability order inside each cluster
@@ -193,7 +194,7 @@ class ZeroBERToDataSelector:
         y_train = label_results[selected_data].tolist()
         labels_train = [true_labels[i] for i in selected_data]
 
-        return x_train, y_train, labels_train, []
+        return x_train, y_train, labels_train, selected_data
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
