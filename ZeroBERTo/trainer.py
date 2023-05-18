@@ -95,7 +95,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.hp_search_backend = None
         self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
         self.freeze_head = freeze_head
-        print(self.freeze_head)
+
     def train(
             self,
             num_epochs: Optional[int] = None,
@@ -229,7 +229,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.model_body.fit(
                     train_objectives=[(train_dataloader, train_loss)],
                     epochs=num_body_epochs,
-                    optimizer_params={"lr": learning_rate},
+                    optimizer_params={"lr": body_learning_rate},
                     warmup_steps=warmup_steps,
                     show_progress_bar=show_progress_bar,
                     use_amp=self.use_amp,
@@ -246,10 +246,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                     num_epochs=num_epochs,
                     batch_size=setfit_batch_size,
                     learning_rate=learning_rate,
-                    body_learning_rate=body_learning_rate,
                     l2_weight=l2_weight,
                     max_length=max_length,
-                    show_progress_bar=True,
+                    show_progress_bar=show_progress_bar,
                 )
 
         training_history = []

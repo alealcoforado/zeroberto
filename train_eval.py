@@ -134,10 +134,6 @@ def main():
 
     print("Start training")
 
-    print(args.use_differentiable_head)
-
-    print(args.freeze_head)
-
     # Build trainer
     trainer = ZeroBERToTrainer(
         model=model,
