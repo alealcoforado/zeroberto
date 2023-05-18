@@ -38,6 +38,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             num_iterations: int = 20,
             num_setfit_iterations: int = 5,
             num_epochs: int = 1,
+            num_body_epochs: int = 1,
             learning_rate: float = 2e-5,
             body_learning_rate: float = 2e-5,
             batch_size: int = 16,
@@ -96,6 +97,7 @@ class ZeroBERToTrainer(SetFitTrainer):
     def train(
             self,
             num_epochs: Optional[int] = None,
+            num_body_epochs: Optional[int] = None,
             num_setfit_iterations: Optional[int] = None,
             batch_size: Optional[int] = None,
             learning_rate: Optional[float] = None,
@@ -162,6 +164,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             self.loss_class = losses.CosineSimilarityLoss
 
         num_epochs = num_epochs or self.num_epochs
+        num_body_epochs = num_body_epochs or self.num_body_epochs
+
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
@@ -213,16 +217,16 @@ class ZeroBERToTrainer(SetFitTrainer):
                     train_loss = self.loss_class(self.model.model_body)
 
                 total_train_steps = len(train_dataloader) * num_epochs
-                logger.info("***** Running training *****")
-                logger.info(f"  Num examples = {len(train_examples)}")
-                logger.info(f"  Num epochs = {num_epochs}")
-                logger.info(f"  Total optimization steps = {total_train_steps}")
-                logger.info(f"  Total train batch size = {setfit_batch_size}")
+                print("** Training body **")
+                print(f"Num examples = {len(train_examples)}")
+                print(f"Num body epochs = {num_body_epochs}")
+                print(f"Total optimization steps = {total_train_steps}")
+                print(f"Total train batch size = {setfit_batch_size}")
 
                 warmup_steps = math.ceil(total_train_steps * self.warmup_proportion)
                 self.model.model_body.fit(
                     train_objectives=[(train_dataloader, train_loss)],
-                    epochs=num_epochs,
+                    epochs=num_body_epochs,
                     optimizer_params={"lr": learning_rate},
                     warmup_steps=warmup_steps,
                     show_progress_bar=show_progress_bar,
@@ -232,6 +236,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             if not self.model.has_differentiable_head or not self._freeze:
                 # Train the final classifier
                 print("Training head")
+                print(f"Num epochs = {num_epochs}")
+
                 self.model.fit(
                     x_train,
                     y_train,
