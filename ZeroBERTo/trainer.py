@@ -114,6 +114,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             reset_model_head: bool = True,
             return_history: bool = False,
             var_samples_per_label: list = None,
+            allow_resampling: bool = False,
     ):
         """
         Main training entry point.
@@ -276,12 +277,17 @@ class ZeroBERToTrainer(SetFitTrainer):
             raise RuntimeError("ZeroBERTo training requires a first shot model")
 
         samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
+
+        training_indices = []
         
         print(f"Data Selector roadmap: {samples_per_label_roadmap}")
         # Iterations of setfit
         for i in range(num_setfit_iterations):
             print(f"********** Running SetFit Iteration {i+1} **********")
-            x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=samples_per_label_roadmap[i])
+            x_train, y_train, labels_train, training_indices = self.data_selector(train_dataset["text"], probs, embeds,
+                                                                                  labels=labels,
+                                                                                  n=samples_per_label_roadmap[i],
+                                                                                  discard_indices=[] if allow_resampling else training_indices)
             print("Data Selected:",len(x_train))
 
              # if demanded and train_dataset["label"], report metrics on the performance of the selection

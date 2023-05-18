@@ -18,6 +18,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
+
 import pandas as pd
 import numpy as np
 
@@ -56,14 +57,14 @@ class FirstShotModel(nn.Module):
         self.queries = self._create_queries(self.classes_list, self.hypothesis_template)
         self.softmax = nn.Softmax(dim=1).to(self.device)
 
-    def forward(self, x, return_embeddings=False):
+    def forward(self, x, return_embeddings=False, temperature=1.0):
         doc_emb = self.embedding_model.encode(x, convert_to_tensor=True, normalize_embeddings=self.normalize_embeddings,
                                              device=self.device)
         stacked_tensors=[]
         for i in range(self.queries.shape[0]):
             stacked_tensors.append(torch.sum(doc_emb * self.queries[i], axis=-1)) # Hadamard product (element-wise)
         logits = torch.stack(stacked_tensors, dim=-1)
-        z = self.softmax(logits)
+        z = self.softmax(logits/temperature)
         return (z, doc_emb) if return_embeddings else z
 
     def _create_queries(self, classes_list, hypothesis):
@@ -108,116 +109,104 @@ class ZeroBERToDataSelector:
     def __init__(self, selection_strategy="top_n"):
         self.selection_strategy = selection_strategy
 
-    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8):
+    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = []):
         if self.selection_strategy == "top_n":
-            return self._get_top_n_data(text_list, probabilities, labels, n)
+            return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
         if self.selection_strategy == "intraclass_clustering":
             # print("Len text and embeds:",len(text_list),len(embeddings))
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n)
 
-    def _get_top_n_data(self, text_list, probabilities,labels,n):
+    def _get_top_n_data(self, text_list, probabilities,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
-        top_prob, index = torch.topk(probabilities, k=n, dim=0)
+        probs = probabilities.copy()
+        if len(discard_indices) > 0:
+            # Set discard item probabilities to -1.0
+            probs[discard_indices] = -1.0*torch.ones(len(discard_indices), probs.shape[-1])
+        top_prob, index = torch.topk(probs, k=n, dim=0)
         top_prob, index = top_prob.T, index.T
-        n_classes = probabilities.shape[-1]
         x_train = []
         y_train = []
         labels_train = []
+        training_indices = []
         for i in range(len(index)):
             for ind in index[i]:
                 y_train.append(i)
                 x_train.append(text_list[ind])
                 if labels:
                     labels_train.append(labels[ind])
-        return x_train, y_train, labels_train
+                training_indices.append(ind)
+        return x_train, y_train, labels_train, training_indices
     
-    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
+    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
-        
-        label_results = [np.argmax(lista) for lista in (np.array(probabilities.cpu()))]
-        prob_results = [np.max(lista) for lista in (np.array(probabilities.cpu()))]
 
-        unique_labels = list(set(label_results))
-        unique_labels.sort()
-        all_labels_selected_data = []
-        for label in unique_labels:
-            this_label_selected_data = []
-            this_label_indexes = [i for i in range(len(label_results)) if label_results[i] == label]
-            # print(this_label_indexes)
-            this_label_text_list =  [text_list[i] for i in this_label_indexes]
-            this_label_embeddings =  [embeddings[i] for i in this_label_indexes]
-            this_label_probs =  [prob_results[i] for i in this_label_indexes]
-            this_label_true_labels = [true_labels[i] for i in this_label_indexes]
-            this_label_label_results = [label_results[i] for i in this_label_indexes]
+        discard_indices = set(discard_indices)
+        prob_results, label_results = torch.max(probabilities, axis=-1)
+
+        selected_data = []
+        for label in range(probabilities.shape[-1]):
+            label_selected_data = []
+
+            # Retrieve indices for label
+            label_indices = (label_results == label).nonzero().squeeze()
+            if len(label_indices) < n:
+                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(label_indexes)}")
+                # Throws error
+                break
+
+            label_embeddings = embeddings[label_indices]
 
 
             print("Clustering class {}.".format(label))
-            # logger.info("Clustering class {}.")
 
-            this_label_clusters = self._clusterer_fit_predict(clusterer, this_label_embeddings, leaf_size, min_cluster_size) 
-            # print(len(this_label_clusters),len(this_label_indexes),len(this_label_text_list),len(this_label_embeddings),len(this_label_probs))
-            unique_clusters = list(set(this_label_clusters))
-            unique_clusters.sort()
-            # print(unique_clusters)
-            all_clusters_sorted_lists = []
+            label_clusters = self._clusterer_fit_predict(clusterer, label_embeddings, leaf_size, min_cluster_size) 
 
-            # organize by sorting and zipping lists, 1 list for each cluster found
+            unique_clusters = list(set(label_clusters))
+            unique_clusters.sort() # Here should be sorted by density, no? - TO DO
+
+            clustered_docs = {}
+
+            # sort docs by probabilities for each cluster found
             for cluster in unique_clusters:
-                this_cluster_indexes = [i for i in range(len(this_label_clusters)) if this_label_clusters[i] == cluster]
-                this_cluster_probs =  [this_label_probs[i] for i in this_cluster_indexes]
-                this_cluster_texts = [this_label_text_list[i] for i in this_cluster_indexes]
-                this_cluster_true_labels = [this_label_true_labels[i] for i in this_cluster_indexes]
-                this_cluster_label_results = [this_label_label_results[i] for i in this_cluster_indexes]
-                zipped_lists = (list(zip(this_cluster_probs,this_cluster_indexes,this_cluster_true_labels,this_cluster_label_results,this_cluster_texts)))
-                zipped_lists.sort(reverse=True)
-                print(f"Cluster {cluster}: {len(this_cluster_indexes)} documents assigned")
-                # print(zipped_lists)
+                cluster_indices = label_indices[(label_clusters == cluster).nonzero().squeeze()]
+                cluster_probs = prob_results[cluster_indices]
+                cluster_probs, cluster_probs_sorted_ind = torch.sort(cluster_probs, descending=True)
+                cluster_indices = cluster_indices[cluster_probs_sorted_ind]
 
-                all_clusters_sorted_lists.append(zipped_lists)
+                clustered_docs[cluster] = [item for item in cluster_indices.tolist() if item not in discard_indices]
+
             # selects data iteratively, 1 from each cluster from biggest to smallest cluster, 
             # following highest probability order inside each cluster
-            while len(this_label_selected_data) < n:
-                for sorted_list in all_clusters_sorted_lists:
-                    if len(sorted_list) > 0:
-                        # print(sorted_list)
-                        selected_element = sorted_list[0]
-                        # print(label,selected_element)
-                        this_label_selected_data.append(selected_element)
-                        sorted_list.pop(0)
-                        # print(sorted_list)
-                        if len(this_label_selected_data) == n:
+            while len(label_selected_data) < n:
+                for cluster in unique_clusters:
+                    if len(clustered_docs[cluster]) > 0:
+                        selected_element = clustered_docs[cluster].pop(0)
+                        label_selected_data.append(selected_element)
+                        if len(label_selected_data) == n:
                             break
-                if len(all_clusters_sorted_lists) == 0 or all_clusters_sorted_lists == [[]]:
-                    print("Not enough data to sample for label {label}: {n} samples expected, but only got {this_label_n}".format(
-                        label=label,n=n,this_label_n=len(this_label_selected_data)))
-                    break
-            all_labels_selected_data.append(this_label_selected_data)
 
-        flat_selected_data = [item for sublist in all_labels_selected_data for item in sublist]
+            selected_data.append(label_selected_data)
 
-        probs,train_indices,true_labels,predicted_labels,texts = zip(*flat_selected_data)
+        selected_data = [item for sublist in selected_data for item in sublist]
 
-        x_train = texts
-        y_train = predicted_labels 
-        labels_train = true_labels
+        x_train = [text_list[i] for i in selected_data]
+        y_train = label_results[selected_data].tolist()
+        labels_train = [true_labels[i] for i in selected_data]
 
-        return x_train, y_train, labels_train
+        return x_train, y_train, labels_train, selected_data
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
             clusterer_model = hdbscan.HDBSCAN(leaf_size=leaf_size, min_cluster_size=min_cluster_size)
-        tensor_embeddings = [] # TO DO melhorar
-        for emb in embeddings: # TO DO melhorar
-          tensor_embeddings.append(torch.Tensor(emb))# TO DO melhorar
-        embeddings = np.array(torch.stack((tensor_embeddings)).cpu())
         clusters = clusterer_model.fit_predict(embeddings)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         print(f"Found {len(list(set(clusters)))} clusters.")
-        return clusters
+        return torch.IntTensor(clusters)
 
     # def _get_intraclass_clustering_data(self,text_list,probabilities,labels,n)
         
+
 class ZeroBERToModel(SetFitModel):
     """A ZeroBERTo model with integration to the Hugging Face Hub. """
 
