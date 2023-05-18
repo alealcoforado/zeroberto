@@ -39,6 +39,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             num_setfit_iterations: int = 5,
             num_epochs: int = 1,
             learning_rate: float = 2e-5,
+            body_learning_rate: float = 2e-5,
             batch_size: int = 16,
             seed: int = 42,
             column_mapping: Optional[Dict[str, str]] = None,
@@ -64,6 +65,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.num_setfit_iterations = num_setfit_iterations
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
+        self.body_learning_rate = body_learning_rate
         self.batch_size = batch_size
         self.seed = seed
         self.column_mapping = column_mapping

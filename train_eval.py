@@ -72,6 +72,12 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--var_samples_per_label", type=int, nargs="*", default=None
     )
+    parser.add_argument(
+        "--learning_rate", type=float,  default=2e-5
+    )
+    parser.add_argument(
+        "--body_learning_rate", type=float, default=2e-5
+    )
 
     args = parser.parse_args()
     return args
@@ -102,6 +108,7 @@ def main():
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
 
+    # print(args.body_learning_rate,args.learning_rate)
     # Load the model
     model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
                                            hypothesis_template=args.hypothesis_template,
@@ -139,7 +146,9 @@ def main():
         column_mapping={"text": "text", "label": "label"},
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
-        var_samples_per_label=args.var_samples_per_label
+        var_samples_per_label=args.var_samples_per_label,
+        learning_rate=args.learning_rate,
+        body_learning_rate=args.body_learning_rate
     )
 
     # Body training
