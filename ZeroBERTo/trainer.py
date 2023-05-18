@@ -49,6 +49,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             margin: float = 0.25,
             samples_per_label: int = 2,
             var_samples_per_label: list = None,
+            freeze_head: bool = True,
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
             raise ValueError(
@@ -90,7 +91,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.model = model
         self.data_selector = data_selector
         self.hp_search_backend = None
-        self._freeze = True  # If True, will train the body only; otherwise, train the body and head
+        self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
 
     def train(
             self,
@@ -263,9 +264,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         else:
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
-        # print(var_samples_per_label)
-        # var_samples_per_label = [el for sublist in var_samples_per_label for el in sublist] if var_samples_per_label is not None else None
-        # print(var_samples_per_label)
+
         samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
         
         print(f"Data Selector roadmap: {samples_per_label_roadmap}")
@@ -275,10 +274,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=samples_per_label_roadmap[i])
             print("Data Selected:",len(x_train))
 
-            # print(list(zip(x_train,y_train,labels_train)))
-            # print(type(x_train),type(y_train),type(labels_train))
-            # print(len(x_train),len(y_train),len(labels_train))
-            # if demanded and train_dataset["label"], report metrics on the performance of the selection
+             # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
                 current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])

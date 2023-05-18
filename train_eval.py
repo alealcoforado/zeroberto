@@ -78,7 +78,12 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--body_learning_rate", type=float, default=2e-5
     )
-
+    parser.add_argument(
+        "--num_body_epochs", type=int, default=1
+    )
+    parser.add_argument(
+        "--freeze_head", type=bool, help="If True, will train body only.", default=True
+    )
     args = parser.parse_args()
     return args
 
@@ -148,7 +153,8 @@ def main():
         batch_size=args.batch_size,
         var_samples_per_label=args.var_samples_per_label,
         learning_rate=args.learning_rate,
-        body_learning_rate=args.body_learning_rate
+        body_learning_rate=args.body_learning_rate,
+        freeze_head=args.freeze_head,
     )
 
     # Body training
