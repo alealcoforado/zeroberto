@@ -114,6 +114,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             reset_model_head: bool = True,
             return_history: bool = False,
             var_samples_per_label: list = None,
+            var_selection_strategy: list = None,
             allow_resampling: bool = False,
     ):
         """
@@ -277,6 +278,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             raise RuntimeError("ZeroBERTo training requires a first shot model")
 
         samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
+        selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
 
         training_indices = []
         
@@ -287,6 +289,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             x_train, y_train, labels_train, training_indices = self.data_selector(train_dataset["text"], probs, embeds,
                                                                                   labels=labels,
                                                                                   n=samples_per_label_roadmap[i],
+                                                                                  selection_strategy=selection_strategy_roadmap[i],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             print("Data Selected:",len(x_train))
 
