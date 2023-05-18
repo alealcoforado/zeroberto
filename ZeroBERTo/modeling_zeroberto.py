@@ -109,12 +109,13 @@ class ZeroBERToDataSelector:
     def __init__(self, selection_strategy="top_n"):
         self.selection_strategy = selection_strategy
 
-    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = []):
-        if self.selection_strategy == "top_n":
+    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = [], selection_strategy=None):
+        if not selection_strategy:
+            selection_strategy = self.selection_strategy
+        if selection_strategy == "top_n":
             return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
-        if self.selection_strategy == "intraclass_clustering":
-            # print("Len text and embeds:",len(text_list),len(embeddings))
-            return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n)
+        if selection_strategy == "intraclass_clustering":
+            return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n, discard_indices)
 
     def _get_top_n_data(self, text_list, probabilities,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
