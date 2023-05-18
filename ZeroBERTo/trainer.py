@@ -174,7 +174,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
-
+        body_learning_rate = body_learning_rate or self.body_learning_rate
         def train_setfit_iteration():
             setfit_batch_size = batch_size
             if not self.model.has_differentiable_head or self._freeze or not self.freeze_body:
