@@ -138,89 +138,70 @@ class ZeroBERToDataSelector:
                 training_indices.append(ind)
         return x_train, y_train, labels_train, training_indices
     
-    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
+    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
 
-        label_results = [np.argmax(lista) for lista in (np.array(probabilities.cpu()))]
-        prob_results = [np.max(lista) for lista in (np.array(probabilities.cpu()))]
+        prob_results, label_results = torch.max(probabilities, axis=-1)
 
-        unique_labels = list(set(label_results))
-        unique_labels.sort()
-        all_labels_selected_data = []
-        for label in unique_labels:
+        selected_data = []
+        for label in range(probabilities.shape[-1]):
             this_label_selected_data = []
-            this_label_indexes = [i for i in range(len(label_results)) if label_results[i] == label]
-            # print(this_label_indexes)
-            this_label_text_list =  [text_list[i] for i in this_label_indexes]
-            this_label_embeddings =  [embeddings[i] for i in this_label_indexes]
-            this_label_probs =  [prob_results[i] for i in this_label_indexes]
-            this_label_true_labels = [true_labels[i] for i in this_label_indexes]
-            this_label_label_results = [label_results[i] for i in this_label_indexes]
+
+            # Retrieve indices for label
+            this_label_indexes = (label_results == label).nonzero().squeeze()
+            if len(this_label_indexes) < n:
+                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(this_label_indexes)}")
+                # Throws error
+                break
+
+            this_label_embeddings = embeddings[this_label_indexes]
 
 
             print("Clustering class {}.".format(label))
-            # logger.info("Clustering class {}.")
 
             this_label_clusters = self._clusterer_fit_predict(clusterer, this_label_embeddings, leaf_size, min_cluster_size) 
-            # print(len(this_label_clusters),len(this_label_indexes),len(this_label_text_list),len(this_label_embeddings),len(this_label_probs))
+
             unique_clusters = list(set(this_label_clusters))
-            unique_clusters.sort()
-            # print(unique_clusters)
-            all_clusters_sorted_lists = []
+            unique_clusters.sort() # Here should be sorted by density, no? - TO DO
 
-            # organize by sorting and zipping lists, 1 list for each cluster found
+            clustered_docs = {}
+
+            # sort docs by probabilities for each cluster found
             for cluster in unique_clusters:
-                this_cluster_indexes = [i for i in range(len(this_label_clusters)) if this_label_clusters[i] == cluster]
-                this_cluster_probs =  [this_label_probs[i] for i in this_cluster_indexes]
-                this_cluster_texts = [this_label_text_list[i] for i in this_cluster_indexes]
-                this_cluster_true_labels = [this_label_true_labels[i] for i in this_cluster_indexes]
-                this_cluster_label_results = [this_label_label_results[i] for i in this_cluster_indexes]
-                zipped_lists = (list(zip(this_cluster_probs,this_cluster_indexes,this_cluster_true_labels,this_cluster_label_results,this_cluster_texts)))
-                zipped_lists.sort(reverse=True)
-                print(f"Cluster {cluster}: {len(this_cluster_indexes)} documents assigned")
-                # print(zipped_lists)
+                this_cluster_indexes = this_label_indexes[(this_label_clusters == cluster).nonzero().squeeze()]
+                this_cluster_probs = prob_results[this_cluster_indexes]
+                this_cluster_probs, cluster_probs_sorted_ind = torch.sort(this_cluster_probs, descending=True)
+                this_cluster_indexes = this_cluster_indexes[cluster_probs_sorted_ind]
 
-                all_clusters_sorted_lists.append(zipped_lists)
+                clustered_docs[cluster] = this_cluster_indexes.tolist()
+
             # selects data iteratively, 1 from each cluster from biggest to smallest cluster, 
             # following highest probability order inside each cluster
             while len(this_label_selected_data) < n:
-                for sorted_list in all_clusters_sorted_lists:
-                    if len(sorted_list) > 0:
-                        # print(sorted_list)
-                        selected_element = sorted_list[0]
-                        # print(label,selected_element)
+                for cluster in unique_clusters:
+                    if len(clustered_docs[cluster]) > 0:
+                        selected_element = clustered_docs[cluster].pop(0)
                         this_label_selected_data.append(selected_element)
-                        sorted_list.pop(0)
-                        # print(sorted_list)
                         if len(this_label_selected_data) == n:
                             break
-                if len(all_clusters_sorted_lists) == 0 or all_clusters_sorted_lists == [[]]:
-                    print("Not enough data to sample for label {label}: {n} samples expected, but only got {this_label_n}".format(
-                        label=label,n=n,this_label_n=len(this_label_selected_data)))
-                    break
-            all_labels_selected_data.append(this_label_selected_data)
 
-        flat_selected_data = [item for sublist in all_labels_selected_data for item in sublist]
+            selected_data.append(this_label_selected_data)
 
-        probs,train_indices,true_labels,predicted_labels,texts = zip(*flat_selected_data)
+        selected_data = [item for sublist in selected_data for item in sublist]
 
-        x_train = texts
-        y_train = predicted_labels 
-        labels_train = true_labels
+        x_train = [text_list[i] for i in selected_data]
+        y_train = label_results[selected_data].tolist()
+        labels_train = [true_labels[i] for i in selected_data]
 
-        return x_train, y_train, labels_train
+        return x_train, y_train, labels_train, []
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
             clusterer_model = hdbscan.HDBSCAN(leaf_size=leaf_size, min_cluster_size=min_cluster_size)
-        tensor_embeddings = [] # TO DO melhorar
-        for emb in embeddings: # TO DO melhorar
-          tensor_embeddings.append(torch.Tensor(emb))# TO DO melhorar
-        embeddings = np.array(torch.stack((tensor_embeddings)).cpu())
         clusters = clusterer_model.fit_predict(embeddings)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         print(f"Found {len(list(set(clusters)))} clusters.")
-        return clusters
+        return torch.IntTensor(clusters)
 
     # def _get_intraclass_clustering_data(self,text_list,probabilities,labels,n)
         
