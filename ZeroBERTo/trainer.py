@@ -38,7 +38,9 @@ class ZeroBERToTrainer(SetFitTrainer):
             num_iterations: int = 20,
             num_setfit_iterations: int = 5,
             num_epochs: int = 1,
+            num_body_epochs: int = 1,
             learning_rate: float = 2e-5,
+            body_learning_rate: float = 2e-5,
             batch_size: int = 16,
             seed: int = 42,
             column_mapping: Optional[Dict[str, str]] = None,
@@ -47,6 +49,9 @@ class ZeroBERToTrainer(SetFitTrainer):
             distance_metric: Callable = BatchHardTripletLossDistanceFunction.cosine_distance,
             margin: float = 0.25,
             samples_per_label: int = 2,
+            var_samples_per_label: list = None,
+            freeze_head: bool = True,
+            freeze_body: bool = False,
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
             raise ValueError(
@@ -62,7 +67,9 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.num_iterations = num_iterations
         self.num_setfit_iterations = num_setfit_iterations
         self.num_epochs = num_epochs
+        self.num_body_epochs = num_body_epochs
         self.learning_rate = learning_rate
+        self.body_learning_rate = body_learning_rate
         self.batch_size = batch_size
         self.seed = seed
         self.column_mapping = column_mapping
@@ -71,7 +78,10 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.distance_metric = distance_metric
         self.margin = margin
         self.samples_per_label = samples_per_label
-
+        self.var_samples_per_label = var_samples_per_label
+        if self.var_samples_per_label is not None:
+            assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
+            # print("Asserting: len(var_samples) = ",len(var_samples_per_label))
         if model is None:
             if model_init is not None:
                 model = self.call_model_init()
@@ -84,11 +94,15 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.model = model
         self.data_selector = data_selector
         self.hp_search_backend = None
-        self._freeze = True  # If True, will train the body only; otherwise, train the body and head
+        self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
+        self.freeze_head = freeze_head
+        self.freeze_body = freeze_body
+
 
     def train(
             self,
             num_epochs: Optional[int] = None,
+            num_body_epochs: Optional[int] = None,
             num_setfit_iterations: Optional[int] = None,
             batch_size: Optional[int] = None,
             learning_rate: Optional[float] = None,
@@ -96,9 +110,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             l2_weight: Optional[float] = None,
             max_length: Optional[int] = None,
             trial: Optional[Union["optuna.Trial", Dict[str, Any]]] = None,
-            show_progress_bar: bool = True,
+            show_progress_bar: bool = False,
             reset_model_head: bool = True,
             return_history: bool = False,
+            var_samples_per_label: list = None,
     ):
         """
         Main training entry point.
@@ -125,6 +140,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 The trial run or the hyperparameter dictionary for hyperparameter search.
             show_progress_bar (`bool`, *optional*, defaults to `True`):
                 Whether to show a bar that indicates training progress.
+            var_samples_per_label (`list`, *optional*, defaults to `None`):
+                A list of integers containing the roadmap for the Data Selector. Needs to have length = num_setfit_iterations. Overrides samples_per_label.
+                If None, will use samples_per_label.
         """
         set_seed(self.seed)  # Seed must be set before instantiating the model when using model_init.
 
@@ -151,13 +169,15 @@ class ZeroBERToTrainer(SetFitTrainer):
             self.loss_class = losses.CosineSimilarityLoss
 
         num_epochs = num_epochs or self.num_epochs
+        num_body_epochs = num_body_epochs or self.num_body_epochs
+
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
-
+        body_learning_rate = body_learning_rate or self.body_learning_rate
         def train_setfit_iteration():
             setfit_batch_size = batch_size
-            if not self.model.has_differentiable_head or self._freeze:
+            if not self.model.has_differentiable_head or self._freeze or not self.freeze_body:
                 # sentence-transformers adaptation
                 if self.loss_class in [
                     losses.BatchAllTripletLoss,
@@ -202,35 +222,36 @@ class ZeroBERToTrainer(SetFitTrainer):
                     train_loss = self.loss_class(self.model.model_body)
 
                 total_train_steps = len(train_dataloader) * num_epochs
-                logger.info("***** Running training *****")
-                logger.info(f"  Num examples = {len(train_examples)}")
-                logger.info(f"  Num epochs = {num_epochs}")
-                logger.info(f"  Total optimization steps = {total_train_steps}")
-                logger.info(f"  Total train batch size = {setfit_batch_size}")
+                print("** Training body **")
+                print(f"Num examples = {len(train_examples)}")
+                print(f"Num body epochs = {num_body_epochs}")
+                print(f"Total optimization steps = {total_train_steps}")
+                print(f"Total train batch size = {setfit_batch_size}")
 
                 warmup_steps = math.ceil(total_train_steps * self.warmup_proportion)
                 self.model.model_body.fit(
                     train_objectives=[(train_dataloader, train_loss)],
-                    epochs=num_epochs,
-                    optimizer_params={"lr": learning_rate},
+                    epochs=num_body_epochs,
+                    optimizer_params={"lr": body_learning_rate},
                     warmup_steps=warmup_steps,
                     show_progress_bar=show_progress_bar,
                     use_amp=self.use_amp,
                 )
 
-            if not self.model.has_differentiable_head or not self._freeze:
+            if not self.model.has_differentiable_head or not self._freeze or not self.freeze_head:
                 # Train the final classifier
                 print("Training head")
+                print(f"Num epochs = {num_epochs}")
+
                 self.model.fit(
                     x_train,
                     y_train,
                     num_epochs=num_epochs,
                     batch_size=setfit_batch_size,
                     learning_rate=learning_rate,
-                    body_learning_rate=body_learning_rate,
                     l2_weight=l2_weight,
                     max_length=max_length,
-                    show_progress_bar=True,
+                    show_progress_bar=show_progress_bar,
                 )
 
         training_history = []
@@ -240,37 +261,55 @@ class ZeroBERToTrainer(SetFitTrainer):
         eval_labels = eval_dataset["label"] if "label" in eval_dataset.features else None
 
         # Run First Shot
+        print(f"Running First-Shot on {len(train_dataset['text'])} documents.")
         if self.model.first_shot_model:
             probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
-                training_history.append({"first_shot":self._predict_metrics(y_pred, labels)})
+                current_metric = {"first_shot":self._predict_metrics(y_pred, labels)}
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                training_history.append(current_metric)
 
         else:
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
 
+        samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
+        
+        print(f"Data Selector roadmap: {samples_per_label_roadmap}")
         # Iterations of setfit
         for i in range(num_setfit_iterations):
-            logger.info(f"********** Running SetFit Iteration {i+1} **********")
-            x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=self.samples_per_label)
-            # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the selection
+            print(f"********** Running SetFit Iteration {i+1} **********")
+            x_train, y_train, labels_train = self.data_selector(train_dataset["text"], probs, embeds, labels=labels, n=samples_per_label_roadmap[i])
+            print("Data Selected:",len(x_train))
+
+             # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
-                training_history.append({f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)})
+                current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+
+                training_history.append(current_metric)
             train_setfit_iteration()
             probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
-                training_history.append({f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)})
+                current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)}
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                training_history.append(current_metric)
+
                 current_probs = self.model.predict_proba(x_train, return_embeddings=False)
                 current_pred = torch.argmax(current_probs, axis=-1)
-                training_history.append({f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)})
+                current_metric = {f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)}
+                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
                     y_pred = torch.argmax(test_probs, axis=-1)
-                    training_history.append({f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])})
+                    current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])}
+                    print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                    training_history.append(current_metric)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
