@@ -94,7 +94,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.data_selector = data_selector
         self.hp_search_backend = None
         self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
-
+        self.freeze_head = freeze_head
     def train(
             self,
             num_epochs: Optional[int] = None,
@@ -234,7 +234,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     use_amp=self.use_amp,
                 )
 
-            if not self.model.has_differentiable_head or not self._freeze:
+            if not self.model.has_differentiable_head or not self._freeze or not self.freeze_head:
                 # Train the final classifier
                 print("Training head")
                 print(f"Num epochs = {num_epochs}")
