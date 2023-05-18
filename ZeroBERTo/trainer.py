@@ -240,7 +240,7 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             if not self.model.has_differentiable_head or not self._freeze or not self.freeze_head:
                 # Train the final classifier
-                print("Training head")
+                print("** Training head **")
                 print(f"Num epochs = {num_epochs}")
 
                 self.model.fit(

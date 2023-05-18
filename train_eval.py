@@ -115,6 +115,9 @@ def main():
         classes_list = ['ham','spam']
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
+    elif args.dataset=='dbpedia_14':
+        classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
+                        "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
 
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
