@@ -66,6 +66,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.num_iterations = num_iterations
         self.num_setfit_iterations = num_setfit_iterations
         self.num_epochs = num_epochs
+        self.num_body_epochs = num_body_epochs
         self.learning_rate = learning_rate
         self.body_learning_rate = body_learning_rate
         self.batch_size = batch_size
