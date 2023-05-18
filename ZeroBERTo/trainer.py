@@ -50,6 +50,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             margin: float = 0.25,
             samples_per_label: int = 2,
             var_samples_per_label: list = None,
+            var_selection_strategy: list = None,
             freeze_head: bool = True,
             freeze_body: bool = False,
     ):
@@ -79,6 +80,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.margin = margin
         self.samples_per_label = samples_per_label
         self.var_samples_per_label = var_samples_per_label
+        self.var_selection_strategy = var_selection_strategy
+
         if self.var_samples_per_label is not None:
             assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
             # print("Asserting: len(var_samples) = ",len(var_samples_per_label))
