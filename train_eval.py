@@ -46,7 +46,7 @@ def arg_parse() -> argparse.Namespace:
         "--multi_target_strategy", type=str, help="Multi Target Strategy", default=None
     )
     parser.add_argument(
-        "--use_differentiable_head", type=bool, help="Use Differentiable head", default=False
+        "--use_differentiable_head", action=argparse.BooleanOptionalAction, help="Use Differentiable head", default=False
     )
     parser.add_argument(
         "--num_iterations", type=int, help="Number of pairs to generate on training.", default=20
@@ -82,7 +82,7 @@ def arg_parse() -> argparse.Namespace:
         "--num_body_epochs", type=int, default=1
     )
     parser.add_argument(
-        "--freeze_head", type=bool, help="If True, will train body only.", default=False
+        "--freeze_head",help="If True, will train body only.", default=False,action=argparse.BooleanOptionalAction
     )
     args = parser.parse_args()
     return args
@@ -94,7 +94,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 10)))
+    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -133,6 +133,8 @@ def main():
     data_selector = ZeroBERToDataSelector(selection_strategy=args.selection_strategy)
 
     print("Start training")
+
+    print(args.use_differentiable_head)
 
     print(args.freeze_head)
 
