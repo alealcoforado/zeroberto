@@ -82,7 +82,10 @@ def arg_parse() -> argparse.Namespace:
         "--num_body_epochs", type=int, default=1
     )
     parser.add_argument(
-        "--freeze_head",help="If True, will train body only.", default=False,action=argparse.BooleanOptionalAction
+        "--freeze_head",help="If True, will train head.", default=False,action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(
+        "--freeze_body",help="If True, will not train body.", default=False,action=argparse.BooleanOptionalAction
     )
     args = parser.parse_args()
     return args
@@ -94,7 +97,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
+    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 10)))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -115,14 +118,23 @@ def main():
 
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
-    model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
-                                           hypothesis_template=args.hypothesis_template,
-                                           classes_list=classes_list,
-                                           multi_target_strategy=args.multi_target_strategy,
-                                           use_differentiable_head=args.use_differentiable_head,
-                                           normalize_embeddings=args.normalize_embeddings,
-                                           head_params={"out_features": len(classes_list)}
-                                           )
+    if args.use_differentiable_head:
+        model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
+                                            hypothesis_template=args.hypothesis_template,
+                                            classes_list=classes_list,
+                                            multi_target_strategy=args.multi_target_strategy,
+                                            use_differentiable_head=args.use_differentiable_head,
+                                            normalize_embeddings=args.normalize_embeddings,
+                                            head_params={"out_features": len(classes_list)}
+                                            )
+    else:
+        model = ZeroBERToModel.from_pretrained(args.model_name_or_path,
+                                            hypothesis_template=args.hypothesis_template,
+                                            classes_list=classes_list,
+                                            multi_target_strategy=args.multi_target_strategy,
+                                            use_differentiable_head=args.use_differentiable_head,
+                                            normalize_embeddings=args.normalize_embeddings,
+                                            )
 
     # Compute metrics function
     metrics = {}
@@ -154,6 +166,8 @@ def main():
         learning_rate=args.learning_rate,
         body_learning_rate=args.body_learning_rate,
         freeze_head=args.freeze_head,
+        freeze_body=args.freeze_body,
+
     )
 
     # Body training

@@ -51,6 +51,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             samples_per_label: int = 2,
             var_samples_per_label: list = None,
             freeze_head: bool = True,
+            freeze_body: bool = False,
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
             raise ValueError(
@@ -95,6 +96,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.hp_search_backend = None
         self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
         self.freeze_head = freeze_head
+        self.freeze_body = freeze_body
+
 
     def train(
             self,
@@ -174,7 +177,7 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         def train_setfit_iteration():
             setfit_batch_size = batch_size
-            if not self.model.has_differentiable_head or self._freeze:
+            if not self.model.has_differentiable_head or self._freeze or not self.freeze_body:
                 # sentence-transformers adaptation
                 if self.loss_class in [
                     losses.BatchAllTripletLoss,
