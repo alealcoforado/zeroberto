@@ -18,6 +18,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
+
 import pandas as pd
 import numpy as np
 
@@ -218,6 +219,7 @@ class ZeroBERToDataSelector:
 
     # def _get_intraclass_clustering_data(self,text_list,probabilities,labels,n)
         
+
 class ZeroBERToModel(SetFitModel):
     """A ZeroBERTo model with integration to the Hugging Face Hub. """
 
