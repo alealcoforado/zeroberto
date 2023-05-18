@@ -57,14 +57,14 @@ class FirstShotModel(nn.Module):
         self.queries = self._create_queries(self.classes_list, self.hypothesis_template)
         self.softmax = nn.Softmax(dim=1).to(self.device)
 
-    def forward(self, x, return_embeddings=False):
+    def forward(self, x, return_embeddings=False, temperature=1.0):
         doc_emb = self.embedding_model.encode(x, convert_to_tensor=True, normalize_embeddings=self.normalize_embeddings,
                                              device=self.device)
         stacked_tensors=[]
         for i in range(self.queries.shape[0]):
             stacked_tensors.append(torch.sum(doc_emb * self.queries[i], axis=-1)) # Hadamard product (element-wise)
         logits = torch.stack(stacked_tensors, dim=-1)
-        z = self.softmax(logits)
+        z = self.softmax(logits/temperature)
         return (z, doc_emb) if return_embeddings else z
 
     def _create_queries(self, classes_list, hypothesis):
@@ -138,9 +138,9 @@ class ZeroBERToDataSelector:
                 training_indices.append(ind)
         return x_train, y_train, labels_train, training_indices
     
-    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n,
+    def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
-        
+
         label_results = [np.argmax(lista) for lista in (np.array(probabilities.cpu()))]
         prob_results = [np.max(lista) for lista in (np.array(probabilities.cpu()))]
 
