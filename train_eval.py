@@ -120,7 +120,8 @@ def main():
                                            classes_list=classes_list,
                                            multi_target_strategy=args.multi_target_strategy,
                                            use_differentiable_head=args.use_differentiable_head,
-                                           normalize_embeddings=args.normalize_embeddings
+                                           normalize_embeddings=args.normalize_embeddings,
+                                           head_params={"out_features": len(classes_list)}
                                            )
 
     # Compute metrics function
