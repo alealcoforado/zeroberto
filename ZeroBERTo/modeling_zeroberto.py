@@ -121,6 +121,8 @@ class ZeroBERToDataSelector:
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
         # probs = probabilities.detach().clone()
+        print(type(discard_indices),len(discard_indices))
+        print(type(probs),probs.shape)
         if len(discard_indices) > 0:
             # Set discard item probabilities to -1.0
             probs[discard_indices] = -1.0*torch.ones(len(discard_indices), probs.shape[-1])
