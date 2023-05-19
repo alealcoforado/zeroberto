@@ -117,10 +117,10 @@ class ZeroBERToDataSelector:
         if selection_strategy == "intraclass_clustering":
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n, discard_indices)
 
-    def _get_top_n_data(self, text_list, probabilities,labels,n,discard_indices = []):
+    def _get_top_n_data(self, text_list, probs,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
-        probs = probabilities.detach().clone()
+        # probs = probabilities.detach().clone()
         if len(discard_indices) > 0:
             # Set discard item probabilities to -1.0
             probs[discard_indices] = -1.0*torch.ones(len(discard_indices), probs.shape[-1])
