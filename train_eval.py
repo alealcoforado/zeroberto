@@ -113,8 +113,13 @@ def main():
         classes_list = ['sadness','joy','love','anger','fear','surprise']
     elif args.dataset=='SetFit/enron_spam':
         classes_list = ['ham','spam']
+    elif args.dataset=='SetFit/20_newsgroups':
+        classes_list = ['atheism', 'computer graphics', 'microsoft windows', 'pc hardware', 'mac hardware','windows x', 'for sale', 'cars'
+                        ,'motorcycles','baseball','hockey', 'cryptography', 'electronics','medicine', 'space', 'christianity',
+                         'guns', 'middle east', 'politics', 'religion'] 
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
+
     elif args.dataset=='dbpedia_14':
         classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
                         "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
