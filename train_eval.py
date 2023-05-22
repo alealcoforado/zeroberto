@@ -101,28 +101,45 @@ def main():
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
+
     if args.dataset=='sst-2':
         classes_list = ["negative", "positive"] # TO DO
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/ag_news':
         classes_list = ["world","sports","business","science and technology"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/sst5':
         classes_list = ["very negative","negative","neutral","positive","very positive"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/emotion':
         classes_list = ['sadness','joy','love','anger','fear','surprise']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/enron_spam':
         classes_list = ['ham','spam']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/20_newsgroups':
         classes_list = ['atheism', 'computer graphics', 'microsoft windows', 'pc hardware', 'mac hardware','windows x', 'for sale', 'cars'
                         ,'motorcycles','baseball','hockey', 'cryptography', 'electronics','medicine', 'space', 'christianity',
                          'guns', 'middle east', 'politics', 'religion'] 
+        dataset_column_mapping = {"text": "text", "label": "label"}
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
-
+        dataset_column_mapping = {"text": "text", "label": "label"}
     elif args.dataset=='dbpedia_14':
         classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
                         "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+    elif args.dataset=='yahoo_answers_topics':
+        classes_list = [ "society & culture", "science & mathematics", 'health', 'education & reference', 'computers & internet',
+                        'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government'  ]
+        dataset_column_mapping = {"question_title": "text", "topic": "label"}
 
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
@@ -167,7 +184,7 @@ def main():
         num_setfit_iterations=args.num_setfit_iterations,
         num_epochs=args.num_epochs,
         seed=42,
-        column_mapping={"text": "text", "label": "label"},
+        column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
         var_samples_per_label=args.var_samples_per_label,
