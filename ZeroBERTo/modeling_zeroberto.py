@@ -122,6 +122,7 @@ class ZeroBERToDataSelector:
         # Aqui permite que o mesmo exemplo entre para duas classes
         # probs = probabilities.detach().clone()
         if len(discard_indices) > 0:
+          if type(discard_indices[0]) != type(int(1)):
             discard_indices = [tensor.item() for tensor in discard_indices]
             probs = probs.float()
        
