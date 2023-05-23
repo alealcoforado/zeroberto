@@ -203,7 +203,8 @@ class ZeroBERToDataSelector:
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
             clusterer_model = hdbscan.HDBSCAN(leaf_size=leaf_size, min_cluster_size=min_cluster_size)
-        clusters = clusterer_model.fit_predict(embeddings)
+        embeds = embeddings.detach().clone().cpu()
+        clusters = clusterer_model.fit_predict(embeds)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         print(f"Found {len(list(set(clusters)))} clusters.")
         return torch.IntTensor(clusters)
