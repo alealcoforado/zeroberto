@@ -121,7 +121,7 @@ class ZeroBERToDataSelector:
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
         # probs = probabilities.detach().clone()
-        if len(discard_indices) > 0:
+        if len(discard_indices) > 0: ## TO DO: melhorar essa parte
           if type(discard_indices[0]) != type(int(1)):
             discard_indices = [tensor.item() for tensor in discard_indices]
             probs = probs.float()
@@ -134,14 +134,16 @@ class ZeroBERToDataSelector:
         y_train = []
         labels_train = []
         training_indices = []
+        probs_train =[]
         for i in range(len(index)):
             for ind in index[i]:
                 y_train.append(i)
                 x_train.append(text_list[ind])
+                probs_train.append(top_prob[i])
                 if labels:
                     labels_train.append(labels[ind])
                 training_indices.append(ind)
-        return x_train, y_train, labels_train, training_indices
+        return x_train, y_train, labels_train, training_indices, probs_train
     
     def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
@@ -198,8 +200,9 @@ class ZeroBERToDataSelector:
         x_train = [text_list[i] for i in selected_data]
         y_train = label_results[selected_data].tolist()
         labels_train = [true_labels[i] for i in selected_data]
+        probs_train = [prob_results[i] for i in selected_data]
 
-        return x_train, y_train, labels_train, selected_data
+        return x_train, y_train, labels_train, selected_data, probs_train
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
         if clusterer=='hdbscan':
@@ -256,7 +259,6 @@ class ZeroBERToModel(SetFitModel):
         model_body = SentenceTransformer(model_id, cache_folder=cache_dir, use_auth_token=use_auth_token)
         target_device = model_body._target_device
         model_body.to(target_device)  # put `model_body` on the target device
-
 
         if os.path.isdir(model_id):
             if MODEL_HEAD_NAME in os.listdir(model_id):
@@ -348,6 +350,8 @@ class ZeroBERToModel(SetFitModel):
         else:
             first_shot_model = None
 
+  
+
         return cls(
             model_body=model_body,
             first_shot_model=first_shot_model,
@@ -395,6 +399,13 @@ class ZeroBERToModel(SetFitModel):
             else:
                 model_head = clf
         self.model_head = model_head
+
+    def reset_model_body(self,model_id="sentence-transformers/paraphrase-mpnet-base-v2"):
+        print(f"Reset Model to checkpoint: {model_id}")
+        self.model_body = SentenceTransformer(model_id)
+        self.model_body.to(("cuda" if torch.cuda.is_available() else "cpu"))
+        
+
 
     def predict_proba(self, x_test: List[str],
                       as_numpy: bool = False,
