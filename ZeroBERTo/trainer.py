@@ -181,7 +181,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
         body_learning_rate = body_learning_rate or self.body_learning_rate
-        def train_setfit_iteration(last_shot_body_epochs=None):
+        def train_setfit_iteration(last_shot_body_epochs=None, last_shot_head_epochs=None):
             setfit_batch_size = batch_size
             if not self.model.has_differentiable_head or self._freeze or not self.freeze_body:
                 # sentence-transformers adaptation
@@ -226,11 +226,11 @@ class ZeroBERToTrainer(SetFitTrainer):
 
                     train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=setfit_batch_size)
                     train_loss = self.loss_class(self.model.model_body)
-
-                total_train_steps = len(train_dataloader) * num_epochs
+                num_body_epochs = last_shot_body_epochs or num_body_epochs
+                total_train_steps = len(train_dataloader) * (num_body_epochs or num_epochs)
                 print("** Training body **")
                 print(f"Num examples = {len(train_examples)}")
-                print(f"Num body epochs = {last_shot_body_epochs or num_body_epochs}")
+                print(f"Num body epochs = {num_body_epochs}")
                 print(f"Total optimization steps = {total_train_steps}")
                 print(f"Total train batch size = {setfit_batch_size}")
 
@@ -246,13 +246,14 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             if not self.model.has_differentiable_head or not self._freeze or not self.freeze_head:
                 # Train the final classifier
+                num_head_epochs = last_shot_head_epochs or num_epochs
                 print("** Training head **")
-                print(f"Num epochs = {num_epochs}")
+                print(f"Num epochs = {num_head_epochs}")
 
                 self.model.fit(
                     x_train,
                     y_train,
-                    num_epochs=num_epochs,
+                    num_epochs=num_head_epochs,
                     batch_size=setfit_batch_size,
                     learning_rate=learning_rate,
                     l2_weight=l2_weight,
@@ -301,6 +302,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   selection_strategy=selection_strategy_roadmap[i],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             print("Data Selected:",len(x_train))
+
             last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
              # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
@@ -338,25 +340,35 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         print(f"Running Last-Shot.")
         t0_lastshot = time.time()
+        print(last_shot_training_data)
         last_shot_training_data = [el for sublist in last_shot_training_data for el in sublist]
-        last_shot_training_data.sort(key=lambda x: x[4]) ## sort by probabilities
+        print(last_shot_training_data)
 
-        print(f"Len of Last Shot Raw Data: {len(last_shot_training_data)}")
+        last_shot_training_data.sort(key=lambda x: max(x[4])) ## sort by probabilities
+
+        print(f"Last Shot raw data size: {len(last_shot_training_data)}")
 
         dict_it = {}
         unique_indices = []
         unique_data = []
         for sublist in last_shot_training_data:
-            if sublist[1] not in unique_indices:
-                unique_indices.append(sublist[1])
+            if int(sublist[3]) not in unique_indices:
+                unique_indices.append(int(sublist[3]))
                 unique_data.append(sublist)
         
         x_train, y_train, labels_train,train_indices,probs = zip(*unique_data)
+        # print(train_indices)
+        # train_indices = [ind for sublist in list(train_indices) for ind in sublist]
+        # print(train_indices)
+        x_train = [train_dataset['text'][int(t.item())] for t in list(train_indices)]
 
+        probs = [prob.to('cuda') for prob in probs]
+        probs_train = torch.stack(probs).to('cuda')
+        # print(len(x_train),len(probs_train),len(probs_train[0]),len(train_indices))
         x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(x_train,probs_train,None,labels=labels_train,
-                                                                                           n=16,selection_strategy='top_n')
-        print(f"Len of Last Shot Final Data: {len(y_train)}")
-        last_shot_body_epochs = 2
+                                                                                           n=8,selection_strategy='top_n')
+        print(f"Last Shot final data: {len(y_train)}")
+        last_shot_body_epochs = 3
         self.model.reset_model_body()
 
         train_setfit_iteration(last_shot_body_epochs)
