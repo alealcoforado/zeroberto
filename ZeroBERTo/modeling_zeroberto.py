@@ -139,7 +139,7 @@ class ZeroBERToDataSelector:
             for ind in index[i]:
                 y_train.append(i)
                 x_train.append(text_list[ind])
-                probs_train.append(top_prob[i])
+                probs_train.append(probs[i])
                 if labels:
                     labels_train.append(labels[ind])
                 training_indices.append(ind)
@@ -200,7 +200,7 @@ class ZeroBERToDataSelector:
         x_train = [text_list[i] for i in selected_data]
         y_train = label_results[selected_data].tolist()
         labels_train = [true_labels[i] for i in selected_data]
-        probs_train = [prob_results[i] for i in selected_data]
+        probs_train = [probabilities[i] for i in selected_data]
 
         return x_train, y_train, labels_train, selected_data, probs_train
 

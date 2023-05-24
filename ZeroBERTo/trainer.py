@@ -175,7 +175,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             self.loss_class = losses.CosineSimilarityLoss
 
         num_epochs = num_epochs or self.num_epochs
-        num_body_epochs = num_body_epochs or self.num_body_epochs
+        num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
 
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
@@ -226,7 +226,7 @@ class ZeroBERToTrainer(SetFitTrainer):
 
                     train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=setfit_batch_size)
                     train_loss = self.loss_class(self.model.model_body)
-                num_body_epochs = last_shot_body_epochs or num_body_epochs
+                num_body_epochs = last_shot_body_epochs or num_epochs
                 total_train_steps = len(train_dataloader) * (num_body_epochs or num_epochs)
                 print("** Training body **")
                 print(f"Num examples = {len(train_examples)}")
@@ -338,67 +338,68 @@ class ZeroBERToTrainer(SetFitTrainer):
 
 
 
-        print(f"Running Last-Shot.")
-        t0_lastshot = time.time()
-        print(last_shot_training_data)
-        last_shot_training_data = [el for sublist in last_shot_training_data for el in sublist]
-        print(last_shot_training_data)
+        # print(f"Running Last-Shot.")
+        # t0_lastshot = time.time()
+        # # print(last_shot_training_data)
+        # last_shot_training_data = [el for sublist in last_shot_training_data for el in sublist]
+        # # print(last_shot_training_data)
 
-        last_shot_training_data.sort(key=lambda x: max(x[4])) ## sort by probabilities
+        # last_shot_training_data.sort(key=lambda x: max(x[4])) ## sort by probabilities
 
-        print(f"Last Shot raw data size: {len(last_shot_training_data)}")
+        # print(f"Last Shot raw data size: {len(last_shot_training_data)}")
 
-        dict_it = {}
-        unique_indices = []
-        unique_data = []
-        for sublist in last_shot_training_data:
-            if int(sublist[3]) not in unique_indices:
-                unique_indices.append(int(sublist[3]))
-                unique_data.append(sublist)
+        # dict_it = {}
+        # unique_indices = []
+        # unique_data = []
+        # for sublist in last_shot_training_data:
+        #     if int(sublist[3]) not in unique_indices:
+        #         unique_indices.append(int(sublist[3]))
+        #         unique_data.append(sublist)
         
-        x_train, y_train, labels_train,train_indices,probs = zip(*unique_data)
-        # print(train_indices)
-        # train_indices = [ind for sublist in list(train_indices) for ind in sublist]
-        # print(train_indices)
-        x_train = [train_dataset['text'][int(t.item())] for t in list(train_indices)]
+        # x_train, y_train, labels_train,train_indices,probs = zip(*unique_data)
+        # # print(train_indices)
+        # # train_indices = [ind for sublist in list(train_indices) for ind in sublist]
+        # # print(train_indices)
+        # x_train = [train_dataset['text'][int(t.item())] for t in list(train_indices)]
 
-        probs = [prob.to('cuda') for prob in probs]
-        probs_train = torch.stack(probs).to('cuda')
-        # print(len(x_train),len(probs_train),len(probs_train[0]),len(train_indices))
-        x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(x_train,probs_train,None,labels=labels_train,
-                                                                                           n=8,selection_strategy='top_n')
-        print(f"Last Shot final data: {len(y_train)}")
-        last_shot_body_epochs = 3
-        self.model.reset_model_body()
+        # probs = [(prob.to('cuda')) for prob in probs]
+        # print(probs)
+        # probs_train = torch.stack(probs).to('cuda')
+        # # print(len(x_train),len(probs_train),len(probs_train[0]),len(train_indices))
+        # x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(x_train,probs_train,None,labels=labels_train,
+        #                                                                                    n=8,selection_strategy='top_n')
+        # print(f"Last Shot final data: {len(y_train)}")
+        # last_shot_body_epochs = 3
+        # self.model.reset_model_body()
 
-        train_setfit_iteration(last_shot_body_epochs)
+        # train_setfit_iteration(last_shot_body_epochs)
 
-        if return_history and labels:
-            current_metric = {f"last_shot_data_selector":self._predict_metrics(y_train, labels_train)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        # if return_history and labels:
+        #     current_metric = {f"last_shot_data_selector":self._predict_metrics(y_train, labels_train)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
 
-        probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        # probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
 
-        if return_history and labels:
-            y_pred = torch.argmax(probs, axis=-1)
-            current_metric = {f"full_train_last_shot":self._predict_metrics(y_pred, labels)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-            training_history.append(current_metric)
+        # if return_history and labels:
+        #     y_pred = torch.argmax(probs, axis=-1)
+        #     current_metric = {f"full_train_last_shot":self._predict_metrics(y_pred, labels)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #     training_history.append(current_metric)
 
-            current_probs = self.model.predict_proba(x_train, return_embeddings=False)
-            current_pred = torch.argmax(current_probs, axis=-1)
-            current_metric = {f"cur_train_last_shot": self._predict_metrics(current_pred, labels_train)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-            training_history.append(current_metric)
-            if eval_dataset and eval_labels:
-                test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
-                y_pred = torch.argmax(test_probs, axis=-1)
-                current_metric = {f"eval_last_shot": self._predict_metrics(y_pred, eval_dataset["label"])}
-                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-                training_history.append(current_metric)
-        # TO DO: if test_dataset, report metrics on the performance of the model on test set
+        #     current_probs = self.model.predict_proba(x_train, return_embeddings=False)
+        #     current_pred = torch.argmax(current_probs, axis=-1)
+        #     current_metric = {f"cur_train_last_shot": self._predict_metrics(current_pred, labels_train)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #     training_history.append(current_metric)
+        #     if eval_dataset and eval_labels:
+        #         test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
+        #         y_pred = torch.argmax(test_probs, axis=-1)
+        #         current_metric = {f"eval_last_shot": self._predict_metrics(y_pred, eval_dataset["label"])}
+        #         print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #         training_history.append(current_metric)
+        # # TO DO: if test_dataset, report metrics on the performance of the model on test set
   
-        print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
+        # print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
 
         return training_history if return_history else None
 
