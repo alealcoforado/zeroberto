@@ -143,6 +143,10 @@ def main():
         classes_list = [ "society & culture", "science & mathematics", 'health', 'education & reference', 'computers & internet',
                         'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government'  ]
         dataset_column_mapping = {"question_title": "text", "topic": "label"}
+    elif args.dataset=='imdb':
+        classes_list = ['negative','positive']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
 
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
