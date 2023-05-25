@@ -138,7 +138,7 @@ def main():
     elif args.dataset=='dbpedia_14':
         classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
                         "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
-        dataset_column_mapping = {"text": "text", "label": "label"}
+        dataset_column_mapping = {"content": "text", "label": "label"}
     elif args.dataset=='yahoo_answers_topics':
         classes_list = [ "society & culture", "science & mathematics", 'health', 'education & reference', 'computers & internet',
                         'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government'  ]
