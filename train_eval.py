@@ -107,6 +107,8 @@ def main():
 
     if args.dataset=='SetFit/sst2':
         classes_list = ["negative", "positive"] # TO DO
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
         dataset_column_mapping = {"text": "text", "label": "label"}
