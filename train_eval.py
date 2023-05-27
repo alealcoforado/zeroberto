@@ -105,7 +105,7 @@ def main():
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
 
-    if args.dataset=='sst-2':
+    if args.dataset=='SetFit/sst2':
         classes_list = ["negative", "positive"] # TO DO
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
