@@ -149,13 +149,20 @@ def main():
         classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
                         "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
         dataset_column_mapping = {"content": "text", "label": "label"}
+
     elif args.dataset=='yahoo_answers_topics':
         classes_list = [ "society & culture", "science & mathematics", 'health', 'education & reference', 'computers & internet',
-                        'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government'  ]
+                        'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government']
         dataset_column_mapping = {"question_title": "text", "topic": "label"}
+
     elif args.dataset=='imdb':
         classes_list = ['negative','positive']
         dataset_column_mapping = {"text": "text", "label": "label"}
+    
+    elif args.dataset=='SetFit/yelp_review_full':
+        classes_list = ['1 star','2 stars','3 stars','4 stars', '5 stars']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+    
 
 
     # print(args.body_learning_rate,args.learning_rate)
