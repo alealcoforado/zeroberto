@@ -235,7 +235,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     train_loss = self.loss_class(self.model.model_body)
                 num_body_epochs = last_shot_body_epochs or num_epochs
                 total_train_steps = len(train_dataloader) * (num_body_epochs or num_epochs)
-                body_learning_rate = last_shot_body_learning_rate or body_learning_rate
+                body_lr = last_shot_body_learning_rate or body_learning_rate
                 print("** Training body **")
                 print(f"Num examples = {len(train_examples)}")
                 print(f"Num body epochs = {num_body_epochs}")
@@ -246,7 +246,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.model_body.fit(
                     train_objectives=[(train_dataloader, train_loss)],
                     epochs=num_body_epochs,
-                    optimizer_params={"lr": body_learning_rate},
+                    optimizer_params={"lr": body_lr},
                     warmup_steps=warmup_steps,
                     show_progress_bar=show_progress_bar,
                     use_amp=self.use_amp,
