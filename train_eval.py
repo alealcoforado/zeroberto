@@ -90,6 +90,14 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--freeze_body",help="If True, will not train body.", default=False,action=argparse.BooleanOptionalAction
     )
+    parser.add_argument(
+        "--first_shot_train",help="If True, will train once before First Shot.", default=False,action=argparse.BooleanOptionalAction
+    )    
+    parser.add_argument(
+        "--allow_resampling",help="If True, will not discard training data on subsequent iterations.", default=False,action=argparse.BooleanOptionalAction
+    )              
+         
+
     args = parser.parse_args()
     return args
 
@@ -202,6 +210,8 @@ def main():
         body_learning_rate=args.body_learning_rate,
         freeze_head=args.freeze_head,
         freeze_body=args.freeze_body,
+        first_shot_train = args.first_shot_train,
+        allow_resampling=args.allow_resampling
 
     )
 
