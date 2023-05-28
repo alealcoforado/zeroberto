@@ -163,8 +163,6 @@ def main():
         classes_list = ['1 star','2 stars','3 stars','4 stars', '5 stars']
         dataset_column_mapping = {"text": "text", "label": "label"}
     
-
-
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
     if args.use_differentiable_head:

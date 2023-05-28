@@ -202,6 +202,7 @@ class ZeroBERToDataSelector:
         labels_train = [true_labels[i] for i in selected_data]
         probs_train = [probabilities[i] for i in selected_data]
 
+        print(list(zip(y_train,labels_train)))
         return x_train, y_train, labels_train, selected_data, probs_train
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):
