@@ -402,9 +402,9 @@ class ZeroBERToModel(SetFitModel):
 
 
     ## TO DO: REFAZER
-    def reset_model_body(self,model_id="sentence-transformers/paraphrase-mpnet-base-v2"):
-        print(f"Reset Model to checkpoint: {model_id}")
-        self.model_body = SentenceTransformer(model_id)
+    def reset_model_body(self,model_body):
+        print(f"Reset Model body to checkpoint.")
+        self.model_body = model_body
         self.model_body.to(("cuda" if torch.cuda.is_available() else "cpu"))
         
 
