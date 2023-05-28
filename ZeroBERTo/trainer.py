@@ -54,7 +54,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             var_selection_strategy: list = None,
             freeze_head: bool = True,
             freeze_body: bool = False,
-            first_shot_train: bool = False,
+            train_first_shot: bool = False,
             allow_resampling: bool = False,
 
     ):
@@ -85,7 +85,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.samples_per_label = samples_per_label
         self.var_samples_per_label = var_samples_per_label
         self.var_selection_strategy = var_selection_strategy
-        self.first_shot_train = first_shot_train
+        self.train_first_shot = train_first_shot
         self.allow_resampling = allow_resampling
 
         if self.var_samples_per_label is not None:
@@ -125,7 +125,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             var_samples_per_label: list = None,
             var_selection_strategy: list = None,
             allow_resampling: bool = False,
-            first_shot_train: bool = False,
+            train_first_shot: bool = False,
     ):
         """
         Main training entry point.
@@ -182,7 +182,7 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         num_epochs = num_epochs or self.num_epochs
         num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
-        first_shot_train = first_shot_train or self.first_shot_train
+        train_first_shot = train_first_shot or self.train_first_shot
 
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
@@ -278,15 +278,15 @@ class ZeroBERToTrainer(SetFitTrainer):
         print(f"Running First-Shot on {len(train_dataset['text'])} documents.")
         t0 = time.time()
 
-        if self.model.first_shot_model and self.first_shot_train:
+        if self.model.first_shot_model and self.train_first_shot:
             x_train, y_train = self._build_first_shot_dataset()
             train_setfit_iteration(last_shot_body_epochs=5)
-            probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+            trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
 
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
-                y_pred = torch.argmax(probs, axis=-1)
+                y_pred = torch.argmax(trained_probs, axis=-1)
                 current_metric = {f"full_train_trained_first_shot:":self._predict_metrics(y_pred, labels)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
@@ -299,11 +299,11 @@ class ZeroBERToTrainer(SetFitTrainer):
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
         if self.model.first_shot_model:
-            probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
+            raw_probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
-                y_pred = torch.argmax(probs, axis=-1)
+                y_pred = torch.argmax(raw_probs, axis=-1)
                 current_metric = {"full_train_raw_first_shot":self._predict_metrics(y_pred, labels)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
@@ -320,6 +320,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         print(f"Data Selector roadmap: {samples_per_label_roadmap}")
         # Iterations of setfit
         t0_setfit = time.time()
+        probs = trained_probs if self.train_first_shot else raw_probs
         for i in range(num_setfit_iterations):
             print(f"********** Running SetFit Iteration {i+1} **********")
             ti_setfit = time.time()
