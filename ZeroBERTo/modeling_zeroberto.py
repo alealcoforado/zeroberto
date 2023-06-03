@@ -57,7 +57,7 @@ class FirstShotModel(nn.Module):
         self.queries = self._create_queries(self.classes_list, self.hypothesis_template)
         self.softmax = nn.Softmax(dim=1).to(self.device)
 
-    def forward(self, x, return_embeddings=False, temperature=1.0):
+    def forward(self, x, return_embeddings=False, return_logits=False, temperature=1.0):
         doc_emb = self.embedding_model.encode(x, convert_to_tensor=True, normalize_embeddings=self.normalize_embeddings,
                                              device=self.device)
         stacked_tensors=[]
@@ -65,7 +65,14 @@ class FirstShotModel(nn.Module):
             stacked_tensors.append(torch.sum(doc_emb * self.queries[i], axis=-1)) # Hadamard product (element-wise)
         logits = torch.stack(stacked_tensors, dim=-1)
         z = self.softmax(logits/temperature)
-        return (z, doc_emb) if return_embeddings else z
+        if return_embeddings:
+            if return_logits:
+                return (z, doc_emb, logits)
+            else:
+                return (z, doc_emb)
+        else:
+            return z
+        #return (z, doc_emb) if return_embeddings else z
 
     def _create_queries(self, classes_list, hypothesis):
         queries = []
@@ -424,3 +431,96 @@ class ZeroBERToModel(SetFitModel):
         outputs = self.model_head.predict_proba(embeddings)
         outputs = self._output_type_conversion(outputs, as_numpy=as_numpy)
         return (outputs, embeddings) if return_embeddings else outputs
+
+class UnsupervisedEvaluator:
+    def __init__(self):
+        self.MSELoss = nn.MSELoss(reduction='none')
+    def __call__(self,embeds, probs, label_embeds, original_logits):
+        metrics = {}
+        metrics.update(self._class_coherence(embeds,probs))
+        metrics.update(self._class_adherence(embeds, probs, label_embeds))
+        metrics.update(self._avg_logits(probs, original_logits))
+        return metrics
+    def _class_coherence(self, embeds, probs): # TO DO: ponderado ou não?
+        # Get the class of each document
+        prob_results, label_results = torch.max(probs, axis=-1)
+        MSE_vector, MSE_weighted_vector, size_class = [], [], []
+        for label in range(probs.shape[-1]):
+            # Find the average for each class
+            current_embeds = embeds[(label_results == label).nonzero().squeeze()]
+            current_prob_results = prob_results[(label_results == label).nonzero().squeeze()]
+            mean_embeds = torch.mean(current_embeds, dim=0)
+            # Mean Squared Error per class
+            squared_errors = self.MSELoss(current_embeds, mean_embeds.repeat(current_embeds.shape[0],1))
+            squared_errors = torch.sum(squared_errors, dim=1)
+            mse_class = torch.mean(squared_errors)
+            mse_weighted_class = torch.mean(squared_errors * current_prob_results)
+            MSE_vector.append(mse_class)
+            MSE_weighted_vector.append(mse_weighted_class)
+            size_class.append(current_embeds.shape[0])
+        # Average of MSE
+        AMSE = float(torch.mean(torch.Tensor(MSE_vector)))
+        AWMSE = float(torch.mean(torch.Tensor(MSE_weighted_vector)))
+        WAMSE = float(torch.sum(torch.Tensor(MSE_vector) * torch.Tensor(size_class))/len(size_class))
+        WAWMSE = float(torch.sum(torch.Tensor(MSE_weighted_vector) * torch.Tensor(size_class))/len(size_class))
+        return {
+            "AMSE_coherence": AMSE,
+            "AWMSE_coherence": AWMSE,
+            "WAMSE_coherence": WAMSE,
+            "WAWMSE_coherence": WAWMSE,
+        }
+
+    def _class_adherence(self, embeds, probs, label_embeds): # TO DO: ponderado ou não?
+        # Get the class of each document
+        prob_results, label_results = torch.max(probs, axis=-1)
+        MSE_vector, MSE_weighted_vector, size_class = [], [], []
+        for label in range(probs.shape[-1]):
+            # Find the average for each class
+            current_embeds = embeds[(label_results == label).nonzero().squeeze()]
+            current_prob_results = prob_results[(label_results == label).nonzero().squeeze()]
+            # Mean Squared Error per class
+            squared_errors = self.MSELoss(current_embeds, label_embeds[label].repeat(current_embeds.shape[0],1))
+            squared_errors = torch.sum(squared_errors, dim=1)
+            mse_class = torch.mean(squared_errors)
+            mse_weighted_class = torch.mean(squared_errors * current_prob_results)
+            MSE_vector.append(mse_class)
+            MSE_weighted_vector.append(mse_weighted_class)
+            size_class.append(current_embeds.shape[0])
+        # Average of MSE
+        AMSE = float(torch.mean(torch.Tensor(MSE_vector)))
+        AWMSE = float(torch.mean(torch.Tensor(MSE_weighted_vector)))
+        WAMSE = float(torch.sum(torch.Tensor(MSE_vector) * torch.Tensor(size_class))/len(size_class))
+        WAWMSE = float(torch.sum(torch.Tensor(MSE_weighted_vector) * torch.Tensor(size_class))/len(size_class))
+        return {
+            "AMSE_adherence": AMSE,
+            "AWMSE_adherence": AWMSE,
+            "WAMSE_adherence": WAMSE,
+            "WAWMSE_adherence": WAWMSE,
+        }
+
+    def _avg_logits(self, probs, original_logits):
+        prob_results, label_results = torch.max(probs, axis=-1)
+        avg_logits_vector, avg_logits_weighted_vector, size_class = [], [], []
+        for label in range(probs.shape[-1]):
+            current_logits = original_logits[(label_results == label).nonzero().squeeze()][:,label]
+            current_prob_results = prob_results[(label_results == label).nonzero().squeeze()]
+            mse_class = torch.mean(current_logits)
+            mse_weighted_class = torch.mean(current_logits * current_prob_results)
+            avg_logits_vector.append(mse_class)
+            avg_logits_weighted_vector.append(mse_weighted_class)
+            size_class.append(current_prob_results.shape[0])
+        # Average of MSE
+        AL = float(torch.mean(torch.Tensor(avg_logits_vector)))
+        AWL = float(torch.mean(torch.Tensor(avg_logits_weighted_vector)))
+        WAL = float(torch.sum(torch.Tensor(avg_logits_vector) * torch.Tensor(size_class)) / len(size_class))
+        WAWL = float(torch.sum(torch.Tensor(avg_logits_weighted_vector) * torch.Tensor(size_class)) / len(size_class))
+        return {
+            "AL": AL,
+            "AWL": AWL,
+            "WAL": WAL,
+            "WAWL": WAWL,
+        }
+
+
+
+

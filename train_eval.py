@@ -31,7 +31,7 @@ def arg_parse() -> argparse.Namespace:
         "--model_name_or_path", type=str, help="Model name", default="sentence-transformers/paraphrase-mpnet-base-v2"
     )
     parser.add_argument(
-        "--dataset", type=str, help="Dataset name", default="sst2"
+        "--dataset", type=str, help="Dataset name", default="SetFit/sst2"
     )
     parser.add_argument(
         "--dataset_train_split", type=str, help="Training data split", default="train"
