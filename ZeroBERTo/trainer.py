@@ -125,6 +125,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             var_samples_per_label: list = None,
             var_selection_strategy: list = None,
             allow_resampling: bool = False,
+            update_embeddings: bool = False,
             train_first_shot: bool = False,
     ):
         """
@@ -340,7 +341,9 @@ class ZeroBERToTrainer(SetFitTrainer):
 
                 training_history.append(current_metric)
             train_setfit_iteration()
-            probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+            probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+            if update_embeddings:
+                embeds = new_embeds
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
