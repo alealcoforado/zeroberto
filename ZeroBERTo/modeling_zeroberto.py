@@ -425,7 +425,7 @@ class ZeroBERToModel(SetFitModel):
         embeddings = self.model_body.encode(
             x_test,
             normalize_embeddings=self.normalize_embeddings,
-            convert_to_tensor=self.has_differentiable_head,
+            convert_to_tensor=(self.has_differentiable_head) or (not as_numpy),
         )
 
         outputs = self.model_head.predict_proba(embeddings)
