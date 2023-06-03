@@ -73,6 +73,9 @@ def arg_parse() -> argparse.Namespace:
         "--var_samples_per_label", type=int, nargs="*", default=None
     )
     parser.add_argument(
+        "--var_selection_strategy", type=str, nargs="*", default=None
+    )
+    parser.add_argument(
         "--learning_rate", type=float,  default=2e-5
     )
     parser.add_argument(
@@ -87,6 +90,14 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--freeze_body",help="If True, will not train body.", default=False,action=argparse.BooleanOptionalAction
     )
+    parser.add_argument(
+        "--train_first_shot",help="If True, will train once before First Shot.", default=False,action=argparse.BooleanOptionalAction
+    )    
+    parser.add_argument(
+        "--allow_resampling",help="If True, will not discard training data on subsequent iterations.", default=False,action=argparse.BooleanOptionalAction
+    )              
+         
+
     args = parser.parse_args()
     return args
 
@@ -97,25 +108,61 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
+    train_dataset = dataset[args.dataset_train_split].shuffle(seed=42).select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
-    if args.dataset=='sst-2':
+
+    if args.dataset=='SetFit/sst2':
         classes_list = ["negative", "positive"] # TO DO
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='ag_news':
         classes_list = ["world","sports","business","science and technology"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/ag_news':
         classes_list = ["world","sports","business","science and technology"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/sst5':
         classes_list = ["very negative","negative","neutral","positive","very positive"]
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/emotion':
         classes_list = ['sadness','joy','love','anger','fear','surprise']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
     elif args.dataset=='SetFit/enron_spam':
         classes_list = ['ham','spam']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+
+    elif args.dataset=='SetFit/20_newsgroups':
+        classes_list = ['atheism', 'computer graphics', 'microsoft windows', 'pc hardware', 'mac hardware','windows x', 'for sale', 'cars'
+                        ,'motorcycles','baseball','hockey', 'cryptography', 'electronics','medicine', 'space', 'christianity',
+                         'guns', 'middle east', 'politics', 'religion'] 
+        dataset_column_mapping = {"text": "text", "label": "label"}
     elif args.dataset=='SetFit/CR':
         classes_list = ['negative','positive']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+    elif args.dataset=='dbpedia_14':
+        classes_list = [ "Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean Of Transportation", 
+                        "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work" ]
+        dataset_column_mapping = {"content": "text", "label": "label"}
 
+    elif args.dataset=='yahoo_answers_topics':
+        classes_list = [ "society & culture", "science & mathematics", 'health', 'education & reference', 'computers & internet',
+                        'sports', 'business & finance', 'entertainment & music', 'family & relationships', 'politics & government']
+        dataset_column_mapping = {"question_title": "text", "topic": "label"}
+
+    elif args.dataset=='imdb':
+        classes_list = ['negative','positive']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+    
+    elif args.dataset=='SetFit/yelp_review_full':
+        classes_list = ['1 star','2 stars','3 stars','4 stars', '5 stars']
+        dataset_column_mapping = {"text": "text", "label": "label"}
+    
     # print(args.body_learning_rate,args.learning_rate)
     # Load the model
     if args.use_differentiable_head:
@@ -159,14 +206,17 @@ def main():
         num_setfit_iterations=args.num_setfit_iterations,
         num_epochs=args.num_epochs,
         seed=42,
-        column_mapping={"text": "text", "label": "label"},
+        column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
         var_samples_per_label=args.var_samples_per_label,
+        var_selection_strategy=args.var_selection_strategy,
         learning_rate=args.learning_rate,
         body_learning_rate=args.body_learning_rate,
         freeze_head=args.freeze_head,
         freeze_body=args.freeze_body,
+        train_first_shot = args.train_first_shot,
+        allow_resampling=args.allow_resampling
 
     )
 
