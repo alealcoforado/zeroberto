@@ -391,7 +391,9 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             training_history.append(current_metric)
         train_setfit_iteration(last_shot_body_epochs=2,last_shot_head_epochs=2,last_shot_body_learning_rate=1e-4)
-        probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        if update_embeddings:
+            embeds = new_embeds
         print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
         if return_history and labels:
             y_pred = torch.argmax(probs, axis=-1)
