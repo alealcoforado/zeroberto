@@ -228,7 +228,7 @@ def main():
     train_history = trainer.train(return_history=True)
     print(train_history)
     dataset_name = args.dataset.split("/")[-1]
-    current_dateTime = datetime.now()
+    current_dateTime = str(datetime.now())
     with open(dataset_name+"_"+ current_dateTime +".json", "w") as final:
         json.dump(train_history, final)
 
