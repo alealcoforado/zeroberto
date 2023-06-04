@@ -8,6 +8,9 @@ import evaluate
 from ZeroBERTo.modeling_zeroberto import ZeroBERToModel, ZeroBERToDataSelector
 from ZeroBERTo.trainer import ZeroBERToTrainer
 
+import json
+from datetime import datetime
+
 def compute_metrics(y_pred, y_test, metrics):
     results = {}
     try:
@@ -31,7 +34,7 @@ def arg_parse() -> argparse.Namespace:
         "--model_name_or_path", type=str, help="Model name", default="sentence-transformers/paraphrase-mpnet-base-v2"
     )
     parser.add_argument(
-        "--dataset", type=str, help="Dataset name", default="sst2"
+        "--dataset", type=str, help="Dataset name", default="SetFit/sst2"
     )
     parser.add_argument(
         "--dataset_train_split", type=str, help="Training data split", default="train"
@@ -224,9 +227,12 @@ def main():
 
     train_history = trainer.train(return_history=True)
     print(train_history)
+    dataset_name = args.dataset.split("/")[-1]
+    current_dateTime = str(datetime.now())
+    with open(dataset_name+"_"+ current_dateTime +".json", "w") as final:
+        json.dump(train_history, final)
 
     # Evaluate
-
     final_metrics = trainer.evaluate()
     print(final_metrics)
 

@@ -20,7 +20,10 @@ if TYPE_CHECKING:
     import optuna
     from datasets import Dataset
 
-    from modeling_zeroberto import ZeroBERToModel, ZeroBERToDataSelector
+    from .modeling_zeroberto import ZeroBERToModel, ZeroBERToDataSelector
+
+from .modeling_zeroberto import UnsupervisedEvaluator
+
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
@@ -106,6 +109,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self._freeze = freeze_head  # If True, will train the body only; otherwise, train the body and head
         self.freeze_head = freeze_head
         self.freeze_body = freeze_body
+        self.unsup_evaluator = UnsupervisedEvaluator()
 
 
     def train(
@@ -301,14 +305,23 @@ class ZeroBERToTrainer(SetFitTrainer):
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
         if self.model.first_shot_model:
-            raw_probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
+            raw_probs, embeds, original_logits = self.model.first_shot_model(train_dataset["text"], return_embeddings=True, return_logits=True)
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(raw_probs, axis=-1)
-                current_metric = {"full_train_raw_first_shot":self._predict_metrics(y_pred, labels)}
+                _, label_embeds = self.model.first_shot_model(self.model.first_shot_model.classes_list, return_embeddings=True)
+                current_metric = {"full_train_raw_first_shot":self._predict_metrics(y_pred, labels), "unsup_full_train_raw_first_shot":self.unsup_evaluator(embeds, raw_probs, label_embeds, original_logits)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                print(list(current_metric.keys())[1], "----- ",current_metric[list(current_metric.keys())[1]])
                 training_history.append(current_metric)
+                if eval_dataset and eval_labels:
+                    test_probs, test_embeds, test_original_logits = self.model.first_shot_model(eval_dataset["text"], return_embeddings=True, return_logits=True)
+                    y_pred = torch.argmax(test_probs, axis=-1)
+                    current_metric = {"eval_raw_first_shot": self._predict_metrics(y_pred, eval_dataset["label"]), "unsup_eval_raw_first_shot}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
+                    print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                    print(list(current_metric.keys())[1], "----- ", current_metric[list(current_metric.keys())[1]])
+                    training_history.append(current_metric)
 
         else:
             # Throws error
@@ -347,7 +360,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
-                current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels)}
+                _, label_embeds = self.model.predict_proba(self.model.first_shot_model.classes_list, return_embeddings=True)
+                current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels), f"unsup_full_train_setfit_iteration-{i+1}":self.unsup_evaluator(new_embeds, probs, label_embeds, original_logits)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
 
@@ -357,9 +371,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
-                    test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
+                    test_probs, test_embeds = self.model.predict_proba(eval_dataset["text"], return_embeddings=True)
                     y_pred = torch.argmax(test_probs, axis=-1)
-                    current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"])}
+                    current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{i+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
@@ -391,7 +405,9 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             training_history.append(current_metric)
         train_setfit_iteration(last_shot_body_epochs=2,last_shot_head_epochs=2,last_shot_body_learning_rate=1e-4)
-        probs, embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        if update_embeddings:
+            embeds = new_embeds
         print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
         if return_history and labels:
             y_pred = torch.argmax(probs, axis=-1)
