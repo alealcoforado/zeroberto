@@ -67,11 +67,11 @@ class FirstShotModel(nn.Module):
         z = self.softmax(logits/temperature)
         if return_embeddings:
             if return_logits:
-                return (z, doc_emb, logits)
+                return (z.cpu(), doc_emb.cpu(), logits.cpu())
             else:
-                return (z, doc_emb)
+                return (z.cpu(), doc_emb.cpu())
         else:
-            return z
+            return z.cpu()
         #return (z, doc_emb) if return_embeddings else z
 
     def _create_queries(self, classes_list, hypothesis):
@@ -425,11 +425,13 @@ class ZeroBERToModel(SetFitModel):
         embeddings = self.model_body.encode(
             x_test,
             normalize_embeddings=self.normalize_embeddings,
-            convert_to_tensor=(self.has_differentiable_head) or (not as_numpy),
+            convert_to_tensor=True,
         )
 
-        outputs = self.model_head.predict_proba(embeddings)
+        outputs = self.model_head.predict_proba(embeddings if self.has_differentiable_head else embeddings.cpu())
         outputs = self._output_type_conversion(outputs, as_numpy=as_numpy)
+        outputs = outputs.cpu()
+        embeddings = embeddings.cpu()
         return (outputs, embeddings) if return_embeddings else outputs
 
 class UnsupervisedEvaluator:
@@ -504,10 +506,10 @@ class UnsupervisedEvaluator:
         for label in range(probs.shape[-1]):
             current_logits = original_logits[(label_results == label).nonzero().squeeze()][:,label]
             current_prob_results = prob_results[(label_results == label).nonzero().squeeze()]
-            mse_class = torch.mean(current_logits)
-            mse_weighted_class = torch.mean(current_logits * current_prob_results)
-            avg_logits_vector.append(mse_class)
-            avg_logits_weighted_vector.append(mse_weighted_class)
+            log_class = torch.mean(current_logits)
+            log_weighted_class = torch.mean(current_logits * current_prob_results)
+            avg_logits_vector.append(log_class)
+            avg_logits_weighted_vector.append(log_weighted_class)
             size_class.append(current_prob_results.shape[0])
         # Average of MSE
         AL = float(torch.mean(torch.Tensor(avg_logits_vector)))
