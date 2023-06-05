@@ -355,6 +355,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             if return_history and labels:
                 current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                # Save data_selector_moment
+                data_selector_tuple = (probs, embeds, labels, selection_strategy_roadmap[i], [] if allow_resampling else training_indices, original_logits)
+                with open(self.experiment_name + "_" + f"data_selector-{i+1}" + '.pickle', 'wb') as handle:
+                    pickle.dump(data_selector_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
                 training_history.append(current_metric)
             train_setfit_iteration()
