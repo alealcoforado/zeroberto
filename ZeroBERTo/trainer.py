@@ -12,6 +12,8 @@ import evaluate
 from tqdm.auto import trange
 from transformers.trainer_utils import set_seed
 
+import pickle
+
 from setfit import SetFitTrainer
 from setfit import logging
 from setfit.modeling import SupConLoss, sentence_pairs_generation, sentence_pairs_generation_multilabel
@@ -59,6 +61,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             freeze_body: bool = False,
             train_first_shot: bool = False,
             allow_resampling: bool = False,
+            experiment_name: str = "training_zeroberto",
 
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
@@ -90,6 +93,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.var_selection_strategy = var_selection_strategy
         self.train_first_shot = train_first_shot
         self.allow_resampling = allow_resampling
+        self.experiment_name = experiment_name
 
         if self.var_samples_per_label is not None:
             assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
@@ -344,13 +348,17 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   n=samples_per_label_roadmap[i],
                                                                                   selection_strategy=selection_strategy_roadmap[i],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
-            print("Data Selected:",len(x_train))
 
+            print("Data Selected:", len(x_train))
             last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
              # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
                 current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+                # Save data_selector_moment
+                data_selector_tuple = (probs, embeds, labels, selection_strategy_roadmap[i], [] if allow_resampling else training_indices, original_logits)
+                with open(self.experiment_name + "_" + f"data_selector-{i+1}" + '.pickle', 'wb') as handle:
+                    pickle.dump(data_selector_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
                 training_history.append(current_metric)
             train_setfit_iteration()

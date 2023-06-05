@@ -115,6 +115,11 @@ def main():
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
+    # Define experiment name
+    dataset_name = args.dataset.split("/")[-1]
+    current_dateTime = str(datetime.now())
+    experiment_name = dataset_name+"_"+ current_dateTime
+
 
     if args.dataset=='SetFit/sst2':
         classes_list = ["negative", "positive"] # TO DO
@@ -219,7 +224,8 @@ def main():
         freeze_head=args.freeze_head,
         freeze_body=args.freeze_body,
         train_first_shot = args.train_first_shot,
-        allow_resampling=args.allow_resampling
+        allow_resampling=args.allow_resampling,
+        experiment_name=experiment_name
 
     )
 
@@ -227,9 +233,8 @@ def main():
 
     train_history = trainer.train(return_history=True)
     print(train_history)
-    dataset_name = args.dataset.split("/")[-1]
-    current_dateTime = str(datetime.now())
-    with open(dataset_name+"_"+ current_dateTime +".json", "w") as final:
+
+    with open(experiment_name+".json", "w") as final:
         json.dump(train_history, final)
 
     # Evaluate
