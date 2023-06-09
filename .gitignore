@@ -3,3 +3,5 @@ __pycache__
 next_steps.txt
 old
 */tests.ipynb
+*.pickle
+*.json
