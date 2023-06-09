@@ -111,7 +111,9 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset = dataset[args.dataset_train_split].shuffle(seed=42).select(range(0,min(len(dataset[args.dataset_train_split]), 5000)))
+    train_dataset_size = range(0,min(len(dataset[args.dataset_train_split]), 5000))
+    random_seed = 42
+    train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(train_dataset_size)
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
@@ -119,6 +121,7 @@ def main():
     dataset_name = args.dataset.split("/")[-1]
     current_dateTime = str(datetime.now())
     experiment_name = dataset_name+"_"+ current_dateTime
+    experiment_hyperparameters_name = dataset_name+"_hyperparameters_"+current_dateTime
 
 
     if args.dataset=='SetFit/sst2':
@@ -229,13 +232,44 @@ def main():
 
     )
 
+    hyperparameters = {}
+    hyperparameters['model_name_or_path'] = args.model_name_or_path
+    hyperparameters['dataset'] = args.dataset
+    hyperparameters['train_dataset_size'] = train_dataset_size
+    hyperparameters['random_seed'] = random_seed
+    hyperparameters['dataset_train_split'] = args.dataset_train_split
+    hyperparameters['dataset_test_split'] = args.dataset_test_split
+    hyperparameters['hypothesis_template'] = args.hypothesis_template
+    hyperparameters['multi_target_strategy'] = args.multi_target_strategy
+    hyperparameters['use_differentiable_head'] = args.use_differentiable_head
+    hyperparameters['num_iterations'] = args.num_iterations
+    hyperparameters['num_setfit_iterations'] = args.num_setfit_iterations
+    hyperparameters['num_epochs'] = args.num_epochs
+    hyperparameters['samples_per_label'] = args.samples_per_label
+    hyperparameters['normalize_embeddings'] = args.normalize_embeddings
+    hyperparameters['selection_strategy'] = args.selection_strategy
+    hyperparameters['batch_size'] = args.batch_size
+    hyperparameters['var_samples_per_label'] = args.var_samples_per_label
+    hyperparameters['var_selection_strategy'] = args.var_selection_strategy
+    hyperparameters['learning_rate'] = args.learning_rate
+    hyperparameters['body_learning_rate'] = args.body_learning_rate
+    hyperparameters['num_body_epochs'] = args.num_body_epochs
+    hyperparameters['freeze_head'] = args.freeze_head
+    hyperparameters['freeze_body'] = args.freeze_body
+    hyperparameters['train_first_shot'] = args.train_first_shot
+    hyperparameters['allow_resampling'] = args.allow_resampling
+    print(hyperparameters)
     # Body training
+
+    with open(experiment_hyperparameters_name+".json", "w") as final:
+        json.dump(hyperparameters, final)
 
     train_history = trainer.train(return_history=True)
     print(train_history)
 
     with open(experiment_name+".json", "w") as final:
         json.dump(train_history, final)
+
 
     # Evaluate
     final_metrics = trainer.evaluate()

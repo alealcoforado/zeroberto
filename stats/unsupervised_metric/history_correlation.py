@@ -35,7 +35,7 @@ def get_parsed_data(raw_data, sup_metric_name="accuracy"):
                 unsup_vec.append(dictx[key])
                 new_key = key.replace("}", "").replace("unsup_", "")
                 sup_vec.append(dictx[new_key]["weighted"][sup_metric_name])
-
+    # print(sup_vec,unsup_vec)
     return sup_vec, unsup_vec
 
 
@@ -44,8 +44,9 @@ def main():
 
     files_list = []
     for file_start in args.files_start:
+        print(file_start)
         files_list = files_list + glob.glob(os.path.join(args.input_dir, file_start + "*.json"))
-
+    print(len(files_list))
     vec_sup_metrics, vec_unsup_metrics = [], []
 
     for file in files_list:
@@ -60,8 +61,15 @@ def main():
 
     # Mount unsup metrics
     df_unsup_metrics = pd.DataFrame(vec_unsup_metrics)
+    print(df_unsup_metrics.columns)
     for unsup_metric in df_unsup_metrics.columns:
+        
         print(unsup_metric)
+        # print(len(vec_sup_metrics))
+
+        # print(len(df_unsup_metrics[unsup_metric]))
+        # this_vec = vec_sup_metrics[(df_unsup_metrics[unsup_metric].dropna().index)]
+        # print(len(this_vec))
         print(scipy.stats.pearsonr(vec_sup_metrics, df_unsup_metrics[unsup_metric]))
         print(scipy.stats.spearmanr(vec_sup_metrics, df_unsup_metrics[unsup_metric]))
         print(scipy.stats.kendalltau(vec_sup_metrics, df_unsup_metrics[unsup_metric]))

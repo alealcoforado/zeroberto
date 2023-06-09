@@ -48,7 +48,10 @@ class FirstShotModel(nn.Module):
     ) -> None:
 
         super(FirstShotModel, self).__init__()
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device or ("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
+        # self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")# "mps" if torch.has_mps else "cpu")
+
+        print(f"1st Shot Model Device: {self.device}")
 
         self.embedding_model = embedding_model
         self.normalize_embeddings = normalize_embeddings
@@ -165,7 +168,7 @@ class ZeroBERToDataSelector:
             # Retrieve indices for label
             label_indices = (label_results == label).nonzero().squeeze()
             if len(label_indices) < n:
-                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(label_indexes)}")
+                print(f"Not enough data to sample for label {label}: {n} samples expected, but only got {len(label_indices)}")
                 # Throws error
                 break
 
@@ -265,8 +268,10 @@ class ZeroBERToModel(SetFitModel):
             **model_kwargs,
     ) -> "ZeroBERToModel":
         model_body = SentenceTransformer(model_id, cache_folder=cache_dir, use_auth_token=use_auth_token)
-        target_device = model_body._target_device
-        model_body.to(target_device)  # put `model_body` on the target device
+        target_device = 'mps' if torch.has_mps else model_body._target_device
+                # model_body.to(target_device)  # put `model_body` on the target device
+        model_body.to(target_device)
+        print(f"ZeroBERTo Body device: {target_device}")
 
         if os.path.isdir(model_id):
             if MODEL_HEAD_NAME in os.listdir(model_id):
@@ -347,7 +352,8 @@ class ZeroBERToModel(SetFitModel):
                 s_transf_first_shot = SentenceTransformer(first_shot_model_id,
                                                         cache_folder=cache_dir,
                                                         use_auth_token=use_auth_token)
-                target_device = s_transf_first_shot._target_device
+                target_device = "mps" if torch.has_mps else s_transf_first_shot._target_device
+                print(f"1st shot moved to {target_device}")
                 s_transf_first_shot.to(target_device)  # put `first_shot_model` on the target device
             else:
                 s_transf_first_shot = model_body
@@ -370,8 +376,8 @@ class ZeroBERToModel(SetFitModel):
 
     def reset_model_head(self, **model_kwargs):
         head_params = model_kwargs.get("head_params", {})
-        target_device = self.model_body._target_device
-
+        target_device = "mps" if torch.has_mps else self.model_body._target_device
+        print(f"Head reset and moved to {target_device}.")
         if type(self.model_head) is SetFitHead: #use_differentiable_head
             if self.multi_target_strategy is None:
                 use_multitarget = False
@@ -411,9 +417,10 @@ class ZeroBERToModel(SetFitModel):
 
     ## TO DO: REFAZER
     def reset_model_body(self,model_body):
-        print(f"Reset Model body to checkpoint.")
         self.model_body = model_body
-        self.model_body.to(("cuda" if torch.cuda.is_available() else "cpu"))
+        target_device = ("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
+        self.model_body.to(target_device)
+        print(f"Reset Model body to checkpoint and moved to {target_device}.")
         
 
 

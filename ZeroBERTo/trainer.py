@@ -401,48 +401,48 @@ class ZeroBERToTrainer(SetFitTrainer):
 
 
 
-        print(f"********** Running Last Shot **********") ##########################
+        # print(f"********** Running Last Shot **********") ##########################
 
-        self.model.reset_model_body(self.model.first_shot_model.embedding_model)
+        # self.model.reset_model_body(self.model.first_shot_model.embedding_model)
 
-        t0_lastshot = time.time()
+        # t0_lastshot = time.time()
 
-        x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
-                                                                        labels=labels,
-                                                                        n=32,
-                                                                        selection_strategy='top_n',
-                                                                        discard_indices=[] if allow_resampling else training_indices)
-        print("Data Selected:",len(x_train))
+        # x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
+        #                                                                 labels=labels,
+        #                                                                 n=32,
+        #                                                                 selection_strategy='top_n',
+        #                                                                 discard_indices=[] if allow_resampling else training_indices)
+        # print("Data Selected:",len(x_train))
 
-        # last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
-            # if demanded and train_dataset["label"], report metrics on the performance of the selection
-        if return_history and labels:
-            current_metric = {f"last_shot_data_selector":self._predict_metrics(y_train, labels_train)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        # # last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
+        #     # if demanded and train_dataset["label"], report metrics on the performance of the selection
+        # if return_history and labels:
+        #     current_metric = {f"last_shot_data_selector":self._predict_metrics(y_train, labels_train)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
 
-            training_history.append(current_metric)
-        train_setfit_iteration(last_shot_body_epochs=2,last_shot_head_epochs=2,last_shot_body_learning_rate=1e-4)
-        probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
-        if update_embeddings:
-            embeds = new_embeds
-        print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
-        if return_history and labels:
-            y_pred = torch.argmax(probs, axis=-1)
-            current_metric = {f"full_train_last_shot":self._predict_metrics(y_pred, labels)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-            training_history.append(current_metric)
+        #     training_history.append(current_metric)
+        # train_setfit_iteration(last_shot_body_epochs=2,last_shot_head_epochs=2,last_shot_body_learning_rate=1e-4)
+        # probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+        # if update_embeddings:
+        #     embeds = new_embeds
+        # print(f"Last Shot time: {round(time.time()-t0_lastshot,2)}")
+        # if return_history and labels:
+        #     y_pred = torch.argmax(probs, axis=-1)
+        #     current_metric = {f"full_train_last_shot":self._predict_metrics(y_pred, labels)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #     training_history.append(current_metric)
 
-            current_probs = self.model.predict_proba(x_train, return_embeddings=False)
-            current_pred = torch.argmax(current_probs, axis=-1)
-            current_metric = {f"cur_train_last_shot": self._predict_metrics(current_pred, labels_train)}
-            print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-            training_history.append(current_metric)
-            if eval_dataset and eval_labels:
-                test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
-                y_pred = torch.argmax(test_probs, axis=-1)
-                current_metric = {f"eval_last_shot": self._predict_metrics(y_pred, eval_dataset["label"])}
-                print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-                training_history.append(current_metric)
+        #     current_probs = self.model.predict_proba(x_train, return_embeddings=False)
+        #     current_pred = torch.argmax(current_probs, axis=-1)
+        #     current_metric = {f"cur_train_last_shot": self._predict_metrics(current_pred, labels_train)}
+        #     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #     training_history.append(current_metric)
+        #     if eval_dataset and eval_labels:
+        #         test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
+        #         y_pred = torch.argmax(test_probs, axis=-1)
+        #         current_metric = {f"eval_last_shot": self._predict_metrics(y_pred, eval_dataset["label"])}
+        #         print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
+        #         training_history.append(current_metric)
 
         return training_history if return_history else None
 
