@@ -111,9 +111,9 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset_size = range(0,min(len(dataset[args.dataset_train_split]), 5000))
+    train_dataset_size = min(len(dataset[args.dataset_train_split]), 5000)
     random_seed = 42
-    train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(train_dataset_size)
+    train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
 
