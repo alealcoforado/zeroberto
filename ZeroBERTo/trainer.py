@@ -301,11 +301,14 @@ class ZeroBERToTrainer(SetFitTrainer):
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
-                    test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=False)
+                    test_embeds, test_probs = self.model.predict_proba(eval_dataset["text"], return_embeddings=True)
                     y_pred = torch.argmax(test_probs, axis=-1)
                     current_metric = {f"eval_trained_first_shot": self._predict_metrics(y_pred, eval_dataset["label"])}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
+                    saving_tuple = (fs_trained_embeds, trained_probs, labels, test_embeds, test_probs, eval_dataset["label"])
+                    with open("dim_" + self.experiment_name + "_" + "full_train_trained_first_shot" + '.pickle', 'wb') as handle:
+                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
         if self.model.first_shot_model:
@@ -326,6 +329,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     print(list(current_metric.keys())[1], "----- ", current_metric[list(current_metric.keys())[1]])
                     training_history.append(current_metric)
+                    saving_tuple = (embeds, raw_probs, labels, test_embeds, test_probs, eval_dataset["label"])
+                    with open("dim_" + self.experiment_name + "_" + "full_train_raw_first_shot:" + '.pickle','wb') as handle:
+                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         else:
             # Throws error
@@ -384,6 +390,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                     current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{i+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
+                    saving_tuple = (new_embeds, probs, labels, test_embeds, test_probs, eval_dataset["label"])
+                    with open("dim_" + self.experiment_name + "_" + f"full_train_setfit_iteration-{i+1}" + '.pickle','wb') as handle:
+                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
