@@ -238,13 +238,14 @@ class ZeroBERToModel(SetFitModel):
             multi_target_strategy: Optional[str] = None,
             l2_weight: float = 1e-2,
             normalize_embeddings: bool = False,
+            model_id: str = None,
     ) -> None:
         super(ZeroBERToModel, self).__init__(model_body,model_head,multi_target_strategy,l2_weight,normalize_embeddings)
 
         # If you don't give a first shot model, we use the body - TO REVIEW
         #if not first_shot_model:
             #first_shot_model = model_body
-
+        self.model_id = model_id
         self.first_shot_model = first_shot_model
 
     @classmethod
@@ -365,13 +366,14 @@ class ZeroBERToModel(SetFitModel):
             first_shot_model = None
 
   
-
+        
         return cls(
             model_body=model_body,
             first_shot_model=first_shot_model,
             model_head=model_head,
             multi_target_strategy=multi_target_strategy,
             normalize_embeddings=normalize_embeddings,
+            model_id=model_id,
         )
 
     def reset_model_head(self, **model_kwargs):
@@ -416,11 +418,14 @@ class ZeroBERToModel(SetFitModel):
 
 
     ## TO DO: REFAZER
-    def reset_model_body(self,model_body):
-        self.model_body = model_body
+    def reset_model_body(self):
+        self.model_body =  SentenceTransformer(self.model_id)
         target_device = ("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")
         self.model_body.to(target_device)
-        print(f"Reset Model body to checkpoint and moved to {target_device}.")
+        print(f"Reset Model body to '{self.model_id}' checkpoint and moved to {target_device}.")
+
+        # no from_pretrained ele passa o model_id
+        # salvar como self.model_id e pegar aq
         
 
 

@@ -348,7 +348,12 @@ class ZeroBERToTrainer(SetFitTrainer):
         probs = trained_probs if self.train_first_shot else raw_probs
         for i in range(num_setfit_iterations):
             print(f"********** Running SetFit Iteration {i+1} **********")
+            
             ti_setfit = time.time()
+            this_select_strat = selection_strategy_roadmap[i]
+            if this_select_strat == 'top_n':
+                self.model.reset_model_body()
+                
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
                                                                                   labels=labels,
                                                                                   n=samples_per_label_roadmap[i],
