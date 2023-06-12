@@ -247,7 +247,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 body_lr = last_shot_body_learning_rate or body_learning_rate
                 # print("** Training body **")
                 # print(f"Num examples = {len(train_examples)}")
-                print(f"Num body epochs = {num_body_epochs}")
+                # print(f"Num body epochs = {num_body_epochs}")
                 # print(f"Total optimization steps = {total_train_steps}")
                 # print(f"Total train batch size = {setfit_batch_size}")
 
@@ -265,7 +265,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 # Train the final classifier
                 num_head_epochs = last_shot_head_epochs or num_epochs
                 # print("** Training head **")
-                print(f"Num head epochs = {num_head_epochs}")
+                # print(f"Num head epochs = {num_head_epochs}")
 
                 self.model.fit(
                     x_train,
