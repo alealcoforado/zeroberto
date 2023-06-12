@@ -417,7 +417,7 @@ class ZeroBERToModel(SetFitModel):
         self.model_head = model_head
 
 
-    ## TO DO: REFAZER
+    ## TO DO: revisar
     def reset_model_body(self):
         self.model_body =  SentenceTransformer(self.model_id)
         target_device = ("cuda" if torch.cuda.is_available() else "mps" if torch.has_mps else "cpu")

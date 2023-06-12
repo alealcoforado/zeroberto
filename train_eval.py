@@ -101,6 +101,9 @@ def arg_parse() -> argparse.Namespace:
     )              
     parser.add_argument(
         "--random_seed",help="Integer as random seed for dataset sampling.", default=42,type=int
+    )
+    parser.add_argument(
+        "--train_dataset_size",help="number of unlabeled samples to take as train dataset", default=5000,type=int
     ) 
 
     args = parser.parse_args()
@@ -113,7 +116,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset_size = min(len(dataset[args.dataset_train_split]), 5000)
+    train_dataset_size = min(len(dataset[args.dataset_train_split]), train_dataset_size)
     # print(f"Train dataset size: {train_dataset_size}")
     random_seed = args.random_seed
     train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))

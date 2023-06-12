@@ -318,7 +318,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         
         if self.model.first_shot_model and self.train_first_shot:
             x_train, y_train = self._build_first_shot_dataset()
-            train_setfit_iteration(last_shot_body_epochs=2)
+            train_setfit_iteration(last_shot_body_epochs=5)
             trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
 
