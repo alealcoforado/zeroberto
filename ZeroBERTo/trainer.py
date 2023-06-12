@@ -178,7 +178,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         eval_dataset = self.eval_dataset
 
         if self.column_mapping is not None:
-            logger.info("Applying column mapping to training dataset")
+            # logger.info("Applying column mapping to training dataset")
             train_dataset = self._apply_column_mapping(self.train_dataset, self.column_mapping)
             if eval_dataset:
                 eval_dataset = self._apply_column_mapping(self.eval_dataset, self.column_mapping)
@@ -245,11 +245,11 @@ class ZeroBERToTrainer(SetFitTrainer):
                 num_body_epochs = last_shot_body_epochs or num_epochs
                 total_train_steps = len(train_dataloader) * (num_body_epochs or num_epochs)
                 body_lr = last_shot_body_learning_rate or body_learning_rate
-                print("** Training body **")
-                print(f"Num examples = {len(train_examples)}")
+                # print("** Training body **")
+                # print(f"Num examples = {len(train_examples)}")
                 print(f"Num body epochs = {num_body_epochs}")
-                print(f"Total optimization steps = {total_train_steps}")
-                print(f"Total train batch size = {setfit_batch_size}")
+                # print(f"Total optimization steps = {total_train_steps}")
+                # print(f"Total train batch size = {setfit_batch_size}")
 
                 warmup_steps = math.ceil(total_train_steps * self.warmup_proportion)
                 self.model.model_body.fit(
@@ -264,8 +264,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             if not self.model.has_differentiable_head or not self._freeze or not self.freeze_head:
                 # Train the final classifier
                 num_head_epochs = last_shot_head_epochs or num_epochs
-                print("** Training head **")
-                print(f"Num epochs = {num_head_epochs}")
+                # print("** Training head **")
+                print(f"Num head epochs = {num_head_epochs}")
 
                 self.model.fit(
                     x_train,
@@ -297,7 +297,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 _, label_embeds = self.model.first_shot_model(self.model.first_shot_model.classes_list, return_embeddings=True)
                 current_metric = {"full_train_raw_first_shot":self._predict_metrics(y_pred, labels), "unsup_full_train_raw_first_shot":self.unsup_evaluator(embeds, raw_probs, label_embeds, original_logits)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-                print(list(current_metric.keys())[1], "----- ",current_metric[list(current_metric.keys())[1]])
+                # print(list(current_metric.keys())[1], "----- ",current_metric[list(current_metric.keys())[1]])
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds, test_original_logits = self.model.first_shot_model(eval_dataset["text"], return_embeddings=True, return_logits=True)
@@ -307,7 +307,7 @@ class ZeroBERToTrainer(SetFitTrainer):
 
                     current_metric = {"eval_raw_first_shot": self._predict_metrics(y_pred, eval_dataset["label"]), "unsup_eval_raw_first_shot}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
-                    print(list(current_metric.keys())[1], "----- ", current_metric[list(current_metric.keys())[1]])
+                    # print(list(current_metric.keys())[1], "----- ", current_metric[list(current_metric.keys())[1]])
                     training_history.append(current_metric)
                     saving_tuple = (embeds, raw_probs, labels, test_embeds, test_probs, eval_dataset["label"])
                     with open("dim_" + self.experiment_name + "_" + "full_train_raw_first_shot:" + '.pickle','wb') as handle:

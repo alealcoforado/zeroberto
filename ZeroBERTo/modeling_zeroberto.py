@@ -379,7 +379,7 @@ class ZeroBERToModel(SetFitModel):
     def reset_model_head(self, **model_kwargs):
         head_params = model_kwargs.get("head_params", {})
         target_device = "mps" if torch.has_mps else self.model_body._target_device
-        print(f"Head reset and moved to {target_device}.")
+        # print(f"Head reset and moved to {target_device}.")
         if type(self.model_head) is SetFitHead: #use_differentiable_head
             if self.multi_target_strategy is None:
                 use_multitarget = False
