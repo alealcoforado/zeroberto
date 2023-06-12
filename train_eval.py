@@ -116,7 +116,7 @@ def main():
 
     # Open the dataset
     dataset = load_dataset(args.dataset)
-    train_dataset_size = min(len(dataset[args.dataset_train_split]), train_dataset_size)
+    train_dataset_size = min(len(dataset[args.dataset_train_split]), args.train_dataset_size)
     # print(f"Train dataset size: {train_dataset_size}")
     random_seed = args.random_seed
     train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))
