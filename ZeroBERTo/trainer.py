@@ -359,7 +359,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             ti_setfit = time.time()
             if i!=0:
                 this_select_strat = selection_strategy_roadmap[i-1]
-                if this_select_strat == 'top_n' or this_select_strat=='intraclass_clustering' and i+1 < num_setfit_iterations:
+                if this_select_strat == 'top_n' and i+1 < num_setfit_iterations:
                     self.model.reset_model_body()
                 
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
@@ -367,6 +367,13 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   n=samples_per_label_roadmap[i],
                                                                                   selection_strategy=selection_strategy_roadmap[i],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
+            # print(x_train)
+            # if self.train_first_shot:
+            #     x_train_fs, y_train_fs = self._build_first_shot_dataset()
+            #     x_train = x_train + x_train_fs
+            #     y_train = y_train + y_train_fs
+            #     # print(type(x_train),type(y_train))
+            #     print(x_train)
 
             print("Data Selected:", len(x_train))
             # last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
