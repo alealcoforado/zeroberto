@@ -99,7 +99,9 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--allow_resampling",help="If True, will not discard training data on subsequent iterations.", default=False,action=argparse.BooleanOptionalAction
     )              
-         
+    parser.add_argument(
+        "--random_seed",help="Integer as random seed for dataset sampling.", default=42,type=int
+    ) 
 
     args = parser.parse_args()
     return args
@@ -112,7 +114,8 @@ def main():
     # Open the dataset
     dataset = load_dataset(args.dataset)
     train_dataset_size = min(len(dataset[args.dataset_train_split]), 5000)
-    random_seed = 42
+    # print(f"Train dataset size: {train_dataset_size}")
+    random_seed = args.random_seed
     train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
