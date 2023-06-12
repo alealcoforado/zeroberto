@@ -359,7 +359,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             ti_setfit = time.time()
             if i!=0:
                 this_select_strat = selection_strategy_roadmap[i-1]
-                if this_select_strat == 'top_n':
+                if this_select_strat == 'top_n' or this_select_strat=='intraclass_clustering' and i+1 < num_setfit_iterations:
                     self.model.reset_model_body()
                 
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
