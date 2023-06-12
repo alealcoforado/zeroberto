@@ -312,7 +312,10 @@ class ZeroBERToTrainer(SetFitTrainer):
                     saving_tuple = (embeds, raw_probs, labels, test_embeds, test_probs, eval_dataset["label"])
                     with open("dim_" + self.experiment_name + "_" + "full_train_raw_first_shot:" + '.pickle','wb') as handle:
                         pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+        else:
+            # Throws error
+            raise RuntimeError("ZeroBERTo training requires a first shot model")
+        
         if self.model.first_shot_model and self.train_first_shot:
             x_train, y_train = self._build_first_shot_dataset()
             train_setfit_iteration(last_shot_body_epochs=2)
@@ -339,9 +342,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
 
-        else:
-            # Throws error
-            raise RuntimeError("ZeroBERTo training requires a first shot model")
+
 
         samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
         selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
