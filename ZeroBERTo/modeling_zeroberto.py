@@ -179,9 +179,13 @@ class ZeroBERToDataSelector:
 
             label_clusters = self._clusterer_fit_predict(clusterer, label_embeddings, leaf_size, min_cluster_size) 
 
-            unique_clusters = list(set(label_clusters))
+            unique_clusters = list(set(label_clusters.tolist()))
+            # print("Unique clusters:")
+            # print(unique_clusters)
             unique_clusters.sort() # Here should be sorted by density, no? - TO DO
-
+            # print("Sorted clusters:")
+            # print(unique_clusters)
+            
             clustered_docs = {}
 
             # sort docs by probabilities for each cluster found
@@ -192,6 +196,7 @@ class ZeroBERToDataSelector:
                 cluster_indices = cluster_indices[cluster_probs_sorted_ind]
 
                 clustered_docs[cluster] = [item for item in cluster_indices.tolist() if item not in discard_indices]
+                # print("Clustered docs:",clustered_docs)
 
             # selects data iteratively, 1 from each cluster from biggest to smallest cluster, 
             # following highest probability order inside each cluster
