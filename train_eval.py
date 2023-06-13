@@ -222,7 +222,7 @@ def main():
         else:
             var_samples_per_label = [16, 32, 64, 128, 256]
             var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
-            num_setfit_iterations = 2
+            num_setfit_iterations = 5
         num_iterations = 10
         num_epochs = 1
         train_first_shot = True
