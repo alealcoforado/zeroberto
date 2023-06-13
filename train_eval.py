@@ -304,8 +304,8 @@ def main():
 
 
     # Evaluate
-    final_metrics = trainer.evaluate()
-    print(final_metrics)
+    # final_metrics = trainer.evaluate()
+    # print(final_metrics)
 
 
 if __name__ == '__main__':
