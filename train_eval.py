@@ -216,17 +216,24 @@ def main():
 
     if args.auto:
         if len(classes_list) == 2:
-            args.var_samples_per_label = [8, 16]
-            args.var_selection_strategy = ['top_n', 'intraclass_clustering']
-            args.num_setfit_iterations = 2
+            var_samples_per_label = [8, 16]
+            var_selection_strategy = ['top_n', 'intraclass_clustering']
+            num_setfit_iterations = 2
         else:
-            args.var_samples_per_label = [16, 32, 64, 128, 256]
-            args.var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
-            args.num_setfit_iterations = 2
-        args.num_iterations = 10
-        args.num_epochs = 1
-        args.train_first_shot = True
-        
+            var_samples_per_label = [16, 32, 64, 128, 256]
+            var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
+            num_setfit_iterations = 2
+        num_iterations = 10
+        num_epochs = 1
+        train_first_shot = True
+    else:
+        var_samples_per_label = None
+        var_selection_strategy = None
+        num_setfit_iterations = None
+        num_iterations = None
+        num_epochs = None
+
+
 
     # Build trainer
     trainer = ZeroBERToTrainer(
@@ -236,20 +243,20 @@ def main():
         eval_dataset=test_dataset,
         metric=compute_metrics_fn,
         loss_class=CosineSimilarityLoss,
-        num_iterations=args.num_iterations,
-        num_setfit_iterations=args.num_setfit_iterations,
-        num_epochs=args.num_epochs,
+        num_iterations= num_iterations or args.num_iterations,
+        num_setfit_iterations=num_setfit_iterations or args.num_setfit_iterations,
+        num_epochs=num_epochs or args.num_epochs,
         seed=42,
         column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
-        var_samples_per_label=args.var_samples_per_label,
-        var_selection_strategy=args.var_selection_strategy,
+        var_samples_per_label=var_samples_per_label or args.var_samples_per_label,
+        var_selection_strategy=var_selection_strategy or args.var_selection_strategy,
         learning_rate=args.learning_rate,
         body_learning_rate=args.body_learning_rate,
         freeze_head=args.freeze_head,
         freeze_body=args.freeze_body,
-        train_first_shot = args.train_first_shot,
+        train_first_shot = train_first_shot or args.train_first_shot,
         allow_resampling=args.allow_resampling,
         experiment_name=experiment_name
 
@@ -265,21 +272,21 @@ def main():
     hyperparameters['hypothesis_template'] = args.hypothesis_template
     hyperparameters['multi_target_strategy'] = args.multi_target_strategy
     hyperparameters['use_differentiable_head'] = args.use_differentiable_head
-    hyperparameters['num_iterations'] = args.num_iterations
-    hyperparameters['num_setfit_iterations'] = args.num_setfit_iterations
-    hyperparameters['num_epochs'] = args.num_epochs
+    hyperparameters['num_iterations'] = num_iterations or args.num_iterations
+    hyperparameters['num_setfit_iterations'] = num_setfit_iterations or args.num_setfit_iterations
+    hyperparameters['num_epochs'] = num_epochs or args.num_epochs
     hyperparameters['samples_per_label'] = args.samples_per_label
     hyperparameters['normalize_embeddings'] = args.normalize_embeddings
     hyperparameters['selection_strategy'] = args.selection_strategy
     hyperparameters['batch_size'] = args.batch_size
-    hyperparameters['var_samples_per_label'] = args.var_samples_per_label
-    hyperparameters['var_selection_strategy'] = args.var_selection_strategy
+    hyperparameters['var_samples_per_label'] = var_samples_per_label or args.var_samples_per_label
+    hyperparameters['var_selection_strategy'] = var_selection_strategy or args.var_selection_strategy
     hyperparameters['learning_rate'] = args.learning_rate
     hyperparameters['body_learning_rate'] = args.body_learning_rate
     hyperparameters['num_body_epochs'] = args.num_body_epochs
     hyperparameters['freeze_head'] = args.freeze_head
     hyperparameters['freeze_body'] = args.freeze_body
-    hyperparameters['train_first_shot'] = args.train_first_shot
+    hyperparameters['train_first_shot'] = train_first_shot or args.train_first_shot
     hyperparameters['allow_resampling'] = args.allow_resampling
     print(hyperparameters)
     # Body training
