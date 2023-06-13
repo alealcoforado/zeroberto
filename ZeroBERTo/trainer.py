@@ -358,8 +358,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             
             ti_setfit = time.time()
             if i!=0:
-                this_select_strat = selection_strategy_roadmap[i-1]
-                if this_select_strat == 'top_n' and i+1 < num_setfit_iterations:
+                last_select_strat = selection_strategy_roadmap[i-1]
+                if last_select_strat == 'top_n' and i+1 < num_setfit_iterations:
                     self.model.reset_model_body()
                 
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
@@ -368,6 +368,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   selection_strategy=selection_strategy_roadmap[i],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             # print(type(y_train),y_train)
+
             if self.train_first_shot:
                 x_train_fs, y_train_fs = self._build_first_shot_dataset()
                 # print(type(y_train_fs))
@@ -421,7 +422,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
             print(f"Iteration {i+1} time: {round(time.time()-ti_setfit,2)}")
-
+            print(self.data_selector.num_of_clusters)
+            if self.data_selector.num_of_clusters == []:
+                print("Training stopped because no more clusters are found.")
+                break
 
 
 

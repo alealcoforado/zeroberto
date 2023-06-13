@@ -105,6 +105,9 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--train_dataset_size",help="number of unlabeled samples to take as train dataset", default=5000,type=int
     ) 
+    parser.add_argument(
+        "--auto",help="If True, will automatically set hyperparameters.", default=False,action=argparse.BooleanOptionalAction
+    ) 
 
     args = parser.parse_args()
     return args
@@ -210,6 +213,20 @@ def main():
     data_selector = ZeroBERToDataSelector(selection_strategy=args.selection_strategy)
 
     print("Start training")
+
+    if args.auto:
+        if len(classes_list) == 2:
+            args.var_samples_per_label = [8, 16]
+            args.var_selection_strategy = ['top_n', 'intraclass_clustering']
+            args.num_setfit_iterations = 2
+        else:
+            args.var_samples_per_label = [16, 32, 64, 128, 256]
+            args.var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
+            args.num_setfit_iterations = 2
+        args.num_iterations = 10
+        args.num_epochs = 1
+        args.train_first_shot = True
+        
 
     # Build trainer
     trainer = ZeroBERToTrainer(
