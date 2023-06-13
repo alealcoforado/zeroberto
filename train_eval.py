@@ -232,6 +232,8 @@ def main():
         num_setfit_iterations = None
         num_iterations = None
         num_epochs = None
+        train_first_shot = None
+
 
 
 
