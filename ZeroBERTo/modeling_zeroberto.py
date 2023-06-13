@@ -118,6 +118,7 @@ class FirstShotModel(nn.Module):
 class ZeroBERToDataSelector:
     def __init__(self, selection_strategy="top_n"):
         self.selection_strategy = selection_strategy
+        self.keep_training = True
 
     def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = [], selection_strategy=None):
         if not selection_strategy:
