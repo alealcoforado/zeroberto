@@ -422,9 +422,9 @@ class ZeroBERToTrainer(SetFitTrainer):
             if reset_model_head and i+1 < num_setfit_iterations:
                 self.model.reset_model_head()
             print(f"Iteration {i+1} time: {round(time.time()-ti_setfit,2)}")
-            print(self.data_selector.num_of_clusters)
-            if self.data_selector.num_of_clusters == []:
-                print("Training stopped because no more clusters are found.")
+
+            if not self.data_selector.keep_training:
+                print("Training stopped because no clusters were found on last iteration.")
                 break
 
 

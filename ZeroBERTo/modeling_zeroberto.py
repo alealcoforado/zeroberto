@@ -157,7 +157,7 @@ class ZeroBERToDataSelector:
     
     def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
-        self.num_of_clusters = []
+        self.keep_training = False
         discard_indices = set(discard_indices)
         prob_results, label_results = torch.max(probabilities, axis=-1)
 
@@ -228,7 +228,7 @@ class ZeroBERToDataSelector:
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         num_of_clusters = len(list(set(clusters)))
         if num_of_clusters!= 1:
-            self.num_of_clusters.append(num_of_clusters)
+            self.keep_training = True
         print(f"Found {num_of_clusters} clusters.")
         return torch.IntTensor(clusters)
 
