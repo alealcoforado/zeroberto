@@ -82,7 +82,7 @@ def arg_parse() -> argparse.Namespace:
         "--learning_rate", type=float,  default=2e-5
     )
     parser.add_argument(
-        "--body_learning_rate", type=float, default=2e-5
+        "--body_learning_rate", type=float, default=5e-6
     )
     parser.add_argument(
         "--num_body_epochs", type=int, default=1
@@ -213,25 +213,17 @@ def main():
     data_selector = ZeroBERToDataSelector(selection_strategy=args.selection_strategy)
 
     print("Start training")
-
+# !python /content/zeroberto/train_eval.py --hypothesis_template="This text is {}." --dataset='SetFit/ag_news' --var_samples_per_label 8 16 32 48 64 --num_setfit_iterations=5 --body_learning_rate=0.5e-05 --var_selection_strategy 'top_n' 'intraclass_clustering' 'top_n' 'intraclass_clustering' 'top_n' --train_first_shot
+    
     if args.auto:
-        if len(classes_list) == 2:
-            var_samples_per_label = [8, 16]
-            var_selection_strategy = ['top_n', 'intraclass_clustering']
-            num_setfit_iterations = 2
-        else:
-            var_samples_per_label = [16, 32, 64, 96, 128, 192, 256]
-            var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n','intraclass_clustering','top_n']
-            num_setfit_iterations = 7
-        num_iterations = 10
-        num_epochs = 1
+        var_samples_per_label = [8, 16, 32, 48, 64]
+        var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
+        num_setfit_iterations = 5
         train_first_shot = True
     else:
         var_samples_per_label = None
         var_selection_strategy = None
         num_setfit_iterations = None
-        num_iterations = None
-        num_epochs = None
         train_first_shot = None
 
 
@@ -245,10 +237,10 @@ def main():
         eval_dataset=test_dataset,
         metric=compute_metrics_fn,
         loss_class=CosineSimilarityLoss,
-        num_iterations= num_iterations or args.num_iterations,
+        num_iterations=  args.num_iterations,
         num_setfit_iterations=num_setfit_iterations or args.num_setfit_iterations,
-        num_epochs=num_epochs or args.num_epochs,
-        seed=42,
+        num_epochs=args.num_epochs,
+        seed=random_seed,
         column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
