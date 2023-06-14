@@ -265,9 +265,9 @@ def main():
     hyperparameters['hypothesis_template'] = args.hypothesis_template
     hyperparameters['multi_target_strategy'] = args.multi_target_strategy
     hyperparameters['use_differentiable_head'] = args.use_differentiable_head
-    hyperparameters['num_iterations'] = num_iterations or args.num_iterations
+    hyperparameters['num_iterations'] = args.num_iterations
     hyperparameters['num_setfit_iterations'] = num_setfit_iterations or args.num_setfit_iterations
-    hyperparameters['num_epochs'] = num_epochs or args.num_epochs
+    hyperparameters['num_epochs'] = args.num_epochs
     hyperparameters['samples_per_label'] = args.samples_per_label
     hyperparameters['normalize_embeddings'] = args.normalize_embeddings
     hyperparameters['selection_strategy'] = args.selection_strategy
