@@ -220,9 +220,9 @@ def main():
             var_selection_strategy = ['top_n', 'intraclass_clustering']
             num_setfit_iterations = 2
         else:
-            var_samples_per_label = [16, 32, 64, 128, 256]
-            var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
-            num_setfit_iterations = 5
+            var_samples_per_label = [16, 32, 64, 96, 128, 192, 256]
+            var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n','intraclass_clustering','top_n']
+            num_setfit_iterations = 7
         num_iterations = 10
         num_epochs = 1
         train_first_shot = True
@@ -261,7 +261,6 @@ def main():
         train_first_shot = train_first_shot or args.train_first_shot,
         allow_resampling=args.allow_resampling,
         experiment_name=experiment_name
-
     )
 
     hyperparameters = {}
