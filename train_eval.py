@@ -82,7 +82,7 @@ def arg_parse() -> argparse.Namespace:
         "--learning_rate", type=float,  default=2e-5
     )
     parser.add_argument(
-        "--body_learning_rate", type=float, default=5e-6
+        "--body_learning_rate", type=float, default=2e-6
     )
     parser.add_argument(
         "--num_body_epochs", type=int, default=1
