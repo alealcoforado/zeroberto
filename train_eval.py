@@ -82,10 +82,10 @@ def arg_parse() -> argparse.Namespace:
         "--learning_rate", type=float,  default=2e-5
     )
     parser.add_argument(
-        "--body_learning_rate", type=float, default=2e-6
+        "--body_learning_rate", type=float, default=1e-6
     )
     parser.add_argument(
-        "--num_body_epochs", type=int, default=1
+        "--num_body_epochs", type=int, default=2
     )
     parser.add_argument(
         "--freeze_head",help="If True, will train head.", default=False,action=argparse.BooleanOptionalAction
@@ -216,9 +216,9 @@ def main():
 # !python /content/zeroberto/train_eval.py --hypothesis_template="This text is {}." --dataset='SetFit/ag_news' --var_samples_per_label 8 16 32 48 64 --num_setfit_iterations=5 --body_learning_rate=0.5e-05 --var_selection_strategy 'top_n' 'intraclass_clustering' 'top_n' 'intraclass_clustering' 'top_n' --train_first_shot
     
     if args.auto:
-        var_samples_per_label = [8, 16, 32, 48, 64]
-        var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n']
-        num_setfit_iterations = 5
+        var_samples_per_label = [8, 16, 32, 48, 64, 128]
+        var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n', 'top_n']
+        num_setfit_iterations = 6
         train_first_shot = True
     else:
         var_samples_per_label = None

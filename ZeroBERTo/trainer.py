@@ -357,10 +357,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             print(f"********** Running SetFit Iteration {i+1} **********")
             
             ti_setfit = time.time()
-            # if i!=0:
-            #     last_select_strat = selection_strategy_roadmap[i-1]
-            #     if last_select_strat == 'top_n' and i+1 < num_setfit_iterations:
-            #         self.model.reset_model_body()
+            if i!=0:
+                last_select_strat = selection_strategy_roadmap[i-1]
+                if last_select_strat == 'top_n' and i+1 < num_setfit_iterations:
+                    self.model.reset_model_body()
                 
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
                                                                                   labels=labels,
