@@ -318,6 +318,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         
         if self.model.first_shot_model and self.train_first_shot:
             x_train, y_train = self._build_first_shot_dataset()
+            print(f'1st shot Dataset: {x_train}')
             train_setfit_iteration(last_shot_body_epochs=5)
             trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
@@ -369,16 +370,11 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             # print(type(y_train),y_train)
 
-            if self.train_first_shot:
-                x_train_fs, y_train_fs = self._build_first_shot_dataset()
-                # print(type(y_train_fs))
-                # print((y_train_fs))
-                x_train = x_train + x_train_fs
-                y_train = y_train + list(y_train_fs)
-                labels_train = labels_train + list(y_train_fs)
-
-                # print(type(x_train),type(y_train))
-                # print(x_train)
+            # if self.train_first_shot:
+            #     x_train_fs, y_train_fs = self._build_first_shot_dataset()
+            #     x_train = x_train + x_train_fs
+            #     y_train = y_train + list(y_train_fs)
+            #     labels_train = labels_train + list(y_train_fs)
 
             print("Data Selected:", len(x_train))
             # last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
@@ -423,9 +419,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.reset_model_head()
             print(f"Iteration {i+1} time: {round(time.time()-ti_setfit,2)}")
 
-            # if not self.data_selector.keep_training:
-            #     print("Training stopped because no clusters were found on last iteration.")
-            #     break
+            if not self.data_selector.keep_training:
+                print("Training stopped because no clusters were found on last iteration.")
+                break
 
 
 
@@ -497,6 +493,5 @@ class ZeroBERToTrainer(SetFitTrainer):
     def _build_first_shot_dataset(self):
         x_train = [self.model.first_shot_model.hypothesis_template.format(cl) for cl in self.model.first_shot_model.classes_list]
         y_train = np.arange(len(self.model.first_shot_model.classes_list))
-        print(x_train,y_train)
         return x_train, y_train
 
