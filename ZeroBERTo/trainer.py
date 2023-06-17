@@ -372,7 +372,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         ### growth_rate
         samples_per_label_roadmap = [self.starting_n, self.starting_n*growth_rate]
         print(samples_per_label_roadmap)
-        selection_strategy_roadmap = (['tn','ic']*5) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*10) 
+        selection_strategy_roadmap = (['tn','ic']*10) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*20) 
         print(selection_strategy_roadmap)
         # samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
         # selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
