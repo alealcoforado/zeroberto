@@ -64,7 +64,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             experiment_name: str = "training_zeroberto",
             growth_rate: int = 2,
             starting_n: int = 8,
-            growth_threshold: int = 0.05,
+            growth_threshold: float = 0.05,
             selection_strategy: str = 'top_n'
 
 
@@ -102,6 +102,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.growth_rate = growth_rate
         self.starting_n = starting_n
         self.selection_strategy = selection_strategy
+        self.growth_threshold = growth_threshold
 
         # if self.var_samples_per_label is not None:
         #     assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
@@ -467,15 +468,19 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.reset_model_head()
 
             if this_mean < last_mean-growth_threshold:
+                print("State 4: Hard stop to prevent overfitting.")
                 self.data_selector.keep_training = False
             elif this_mean < last_mean:
+                print("State 2: Cautious.")
                 n_to_add = samples_per_label_roadmap[-1]
                 samples_per_label_roadmap.append(int(n_to_add))
 
             elif this_mean < last_mean+growth_threshold and this_std < last_std+growth_threshold:
+                print("State 3: Not learning enough.")
                 n_to_add = samples_per_label_roadmap[-1] * (1/self.growth_rate)
                 samples_per_label_roadmap.append(int(n_to_add))
             else:
+                print("State 1: Adding more data.")
                 n_to_add = samples_per_label_roadmap[-1] * (self.growth_rate)
                 samples_per_label_roadmap.append(int(n_to_add))
 
