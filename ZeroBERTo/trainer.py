@@ -189,6 +189,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self._validate_column_mapping(self.train_dataset)
         train_dataset = self.train_dataset
         eval_dataset = self.eval_dataset
+        growth_threshold = self.growth_threshold or growth_threshold
 
         if self.column_mapping is not None:
             # logger.info("Applying column mapping to training dataset")
