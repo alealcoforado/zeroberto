@@ -466,8 +466,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and iteration+1 < num_setfit_iterations:
                 self.model.reset_model_head()
-
-            if this_mean < last_mean-growth_threshold:
+            
+            if iteration==0:
+                pass
+            elif this_mean < last_mean-growth_threshold:
                 print("State 4: Hard stop to prevent overfitting.")
                 self.data_selector.keep_training = False
             elif this_mean < last_mean:
