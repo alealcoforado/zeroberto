@@ -329,7 +329,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
             max_probs = ([max(probs) for probs in trained_probs])
-            print(max_probs)
+            
             print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
@@ -400,7 +400,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
 
             max_probs = ([max(probs) for probs in probs])
-            print(max_probs)
+            
             print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
             if update_embeddings:
                 embeds = new_embeds
@@ -420,7 +420,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds = self.model.predict_proba(eval_dataset["text"], return_embeddings=True)
                     max_probs = ([max(probs) for probs in test_probs])
-                    print(max_probs)
+                    
                     print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
                     y_pred = torch.argmax(test_probs, axis=-1)
                     current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{i+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
