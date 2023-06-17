@@ -467,7 +467,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             if reset_model_head and iteration+1 < num_setfit_iterations:
                 self.model.reset_model_head()
             
-            print(this_mean,last_mean)
+            print(this_mean,last_mean,growth_threshold)
             if iteration==0:
                 n_to_add = self.starting_n+1
             elif float(this_mean) < float(last_mean)-growth_threshold:
