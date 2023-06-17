@@ -125,9 +125,9 @@ class ZeroBERToDataSelector:
             selection_strategy = self.selection_strategy
         if selection_strategy == 'first_shot':
             return self._get_first_shot_roadmap('hdbscan',embeddings,leaf_size,min_cluster_size)
-        if selection_strategy == "top_n":
+        if selection_strategy == "top_n" or selection_strategy == "tn" :
             return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
-        if selection_strategy == "intraclass_clustering":
+        if selection_strategy == "intraclass_clustering" or selection_strategy == 'ic':
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n, discard_indices)
     def _get_first_shot_roadmap(self, clusterer, embeddings, leaf_size, min_cluster_size):
         clusters = self._clusterer_fit_predict(clusterer,embeddings,leaf_size,min_cluster_size)
