@@ -120,14 +120,19 @@ class ZeroBERToDataSelector:
         self.selection_strategy = selection_strategy
         self.keep_training = True
 
-    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = [], selection_strategy=None):
+    def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = [], selection_strategy=None,min_cluster_size=10,leaf_size=20):
         if not selection_strategy:
             selection_strategy = self.selection_strategy
+        if selection_strategy == 'first_shot':
+            return self._get_first_shot_roadmap('hdbscan',embeddings,leaf_size,min_cluster_size)
         if selection_strategy == "top_n":
             return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
         if selection_strategy == "intraclass_clustering":
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n, discard_indices)
-
+    def _get_first_shot_roadmap(self, clusterer, embeddings, leaf_size, min_cluster_size):
+        clusters = self._clusterer_fit_predict(clusterer,embeddings,leaf_size,min_cluster_size)
+        print(len(clusters))
+        return clusters
     def _get_top_n_data(self, text_list, probs,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
@@ -218,7 +223,7 @@ class ZeroBERToDataSelector:
         labels_train = [true_labels[i] for i in selected_data]
         probs_train = [probabilities[i] for i in selected_data]
 
-        print(list(zip(y_train,labels_train)))
+        # print(list(zip(y_train,labels_train)))
         return x_train, y_train, labels_train, selected_data, probs_train
 
     def _clusterer_fit_predict(self,clusterer,embeddings,leaf_size,min_cluster_size):

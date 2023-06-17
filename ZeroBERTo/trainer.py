@@ -290,8 +290,11 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         if self.model.first_shot_model:
             raw_probs, embeds, original_logits = self.model.first_shot_model(train_dataset["text"], return_embeddings=True, return_logits=True)
+            max_probs = ([max(probs) for probs in raw_probs])
+            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
-            # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
+            # self.data_selector(None, None, embeds,selection_strategy='first_shot')            
+            # # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(raw_probs, axis=-1)
                 _, label_embeds = self.model.first_shot_model(self.model.first_shot_model.classes_list, return_embeddings=True)
@@ -301,6 +304,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds, test_original_logits = self.model.first_shot_model(eval_dataset["text"], return_embeddings=True, return_logits=True)
+                    max_probs = ([max(probs) for probs in test_probs])
+                    print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+
                     # print("raw:",test_probs)
                     y_pred = torch.argmax(test_probs, axis=-1)
                     # print(list(zip(y_pred[0:20],eval_dataset['label'][0:20])))
@@ -310,8 +316,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                     # print(list(current_metric.keys())[1], "----- ", current_metric[list(current_metric.keys())[1]])
                     training_history.append(current_metric)
                     saving_tuple = (embeds, raw_probs, labels, test_embeds, test_probs, eval_dataset["label"])
-                    with open("dim_" + self.experiment_name + "_" + "full_train_raw_first_shot:" + '.pickle','wb') as handle:
-                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    # with open("dim_" + self.experiment_name + "_" + "full_train_raw_first_shot:" + '.pickle','wb') as handle:
+                    #     pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
         else:
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
@@ -322,7 +328,9 @@ class ZeroBERToTrainer(SetFitTrainer):
             train_setfit_iteration(last_shot_body_epochs=5)
             trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
-
+            max_probs = ([max(probs) for probs in trained_probs])
+            print(max_probs)
+            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(trained_probs, axis=-1)
@@ -338,8 +346,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
                     saving_tuple = (fs_trained_embeds, trained_probs, labels, test_embeds, test_probs, eval_dataset["label"])
-                    with open("dim_" + self.experiment_name + "_" + "full_train_trained_first_shot" + '.pickle', 'wb') as handle:
-                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    # with open("dim_" + self.experiment_name + "_" + "full_train_trained_first_shot" + '.pickle', 'wb') as handle:
+                    #     pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
 
@@ -390,6 +398,10 @@ class ZeroBERToTrainer(SetFitTrainer):
                 training_history.append(current_metric)
             train_setfit_iteration()
             probs, new_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
+
+            max_probs = ([max(probs) for probs in probs])
+            print(max_probs)
+            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
             if update_embeddings:
                 embeds = new_embeds
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
@@ -407,6 +419,9 @@ class ZeroBERToTrainer(SetFitTrainer):
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds = self.model.predict_proba(eval_dataset["text"], return_embeddings=True)
+                    max_probs = ([max(probs) for probs in test_probs])
+                    print(max_probs)
+                    print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
                     y_pred = torch.argmax(test_probs, axis=-1)
                     current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{i+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
