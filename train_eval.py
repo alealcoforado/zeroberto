@@ -298,6 +298,8 @@ def main():
     hyperparameters['growth_rate'] = growth_rate
     hyperparameters['growth_threshold'] = growth_threshold
     hyperparameters['starting_n'] = starting_n
+
+
     print(hyperparameters)
     # Body training
 

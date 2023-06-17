@@ -163,7 +163,7 @@ class ZeroBERToDataSelector:
     
     def _get_intraclass_clustering_data(self, text_list, probabilities, true_labels, embeddings, n, discard_indices = [],
                                          clusterer='hdbscan', leaf_size=20, min_cluster_size=10):
-        self.keep_training = False
+        self.keep_training = True
         discard_indices = set(discard_indices)
         prob_results, label_results = torch.max(probabilities, axis=-1)
 
