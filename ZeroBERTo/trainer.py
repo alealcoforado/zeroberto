@@ -466,13 +466,15 @@ class ZeroBERToTrainer(SetFitTrainer):
             if reset_model_head and iteration+1 < num_setfit_iterations:
                 self.model.reset_model_head()
 
-            if this_mean < last_mean-growth_threshold and this_std < last_std:
+            if this_mean < last_mean-growth_threshold:
                 self.data_selector.keep_training = False
+            elif this_mean < last_mean:
+                n_to_add = samples_per_label_roadmap[-1]
+                samples_per_label_roadmap.append(int(n_to_add))
 
             elif this_mean < last_mean+growth_threshold and this_std < last_std+growth_threshold:
                 n_to_add = samples_per_label_roadmap[-1] * (1/self.growth_rate)
                 samples_per_label_roadmap.append(int(n_to_add))
-
             else:
                 n_to_add = samples_per_label_roadmap[-1] * (self.growth_rate)
                 samples_per_label_roadmap.append(int(n_to_add))
