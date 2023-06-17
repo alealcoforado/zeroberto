@@ -62,6 +62,11 @@ class ZeroBERToTrainer(SetFitTrainer):
             train_first_shot: bool = False,
             allow_resampling: bool = False,
             experiment_name: str = "training_zeroberto",
+            growth_rate: int = 2,
+            starting_n: int = 8,
+            growth_threshold: int = 0.05,
+            selection_strategy: str = 'top_n'
+
 
     ):
         if (warmup_proportion < 0.0) or (warmup_proportion > 1.0):
@@ -94,9 +99,12 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.train_first_shot = train_first_shot
         self.allow_resampling = allow_resampling
         self.experiment_name = experiment_name
+        self.growth_rate = growth_rate
+        self.starting_n = starting_n
+        self.selection_strategy = selection_strategy
 
-        if self.var_samples_per_label is not None:
-            assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
+        # if self.var_samples_per_label is not None:
+        #     assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
             # print("Asserting: len(var_samples) = ",len(var_samples_per_label))
         if model is None:
             if model_init is not None:
@@ -135,6 +143,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             allow_resampling: bool = False,
             update_embeddings: bool = False,
             train_first_shot: bool = False,
+            growth_rate: int = 2,
+            growth_threshold: float = 0.05,
+            starting_n: int = 8,
+
     ):
         """
         Main training entry point.
@@ -279,7 +291,6 @@ class ZeroBERToTrainer(SetFitTrainer):
                 )
 
         training_history = []
-
         # Check if there is labels
         labels = train_dataset["label"] if "label" in train_dataset.features else None
         eval_labels = eval_dataset["label"] if "label" in eval_dataset.features else None
@@ -291,7 +302,10 @@ class ZeroBERToTrainer(SetFitTrainer):
         if self.model.first_shot_model:
             raw_probs, embeds, original_logits = self.model.first_shot_model(train_dataset["text"], return_embeddings=True, return_logits=True)
             max_probs = ([max(probs) for probs in raw_probs])
-            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+            last_mean = torch.mean(torch.stack(max_probs))
+            last_std = torch.std(torch.stack(max_probs))
+
+            print("mean:",float(last_mean),"-- std:",float(last_std))
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
             # self.data_selector(None, None, embeds,selection_strategy='first_shot')            
             # # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
@@ -329,8 +343,10 @@ class ZeroBERToTrainer(SetFitTrainer):
             trained_probs, fs_trained_embeds = self.model.predict_proba(train_dataset["text"], return_embeddings=True)
             print(f"1st shot - train and prediction time: {round(time.time()-t0,2)} seconds")
             max_probs = ([max(probs) for probs in trained_probs])
-            
-            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+            last_mean = torch.mean(torch.stack(max_probs))
+            last_std = torch.std(torch.stack(max_probs))
+
+            print("mean:",float(last_mean),"-- std:",float(last_std))
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(trained_probs, axis=-1)
@@ -351,10 +367,13 @@ class ZeroBERToTrainer(SetFitTrainer):
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
 
-
-
-        samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
-        selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
+        ### growth_rate
+        samples_per_label_roadmap = [self.starting_n, self.starting_n*growth_rate]
+        print(samples_per_label_roadmap)
+        selection_strategy_roadmap = (['tn','ic']*5) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*10) 
+        print(selection_strategy_roadmap)
+        # samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
+        # selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
 
         training_indices = []
         last_shot_training_data = []
@@ -362,19 +381,20 @@ class ZeroBERToTrainer(SetFitTrainer):
         # Iterations of setfit
         t0_setfit = time.time()
         probs = trained_probs if self.train_first_shot else raw_probs
-        for i in range(num_setfit_iterations):
-            print(f"********** Running SetFit Iteration {i+1} **********")
+        
+        for iteration,_ in enumerate(samples_per_label_roadmap):
+            print(f"********** Running SetFit Iteration {iteration+1} **********")
             
             ti_setfit = time.time()
-            if i!=0:
-                last_select_strat = selection_strategy_roadmap[i-1]
-                if last_select_strat == 'top_n' and i+1 < num_setfit_iterations:
+            if iteration!=0:
+                last_select_strat = selection_strategy_roadmap[iteration-1]
+                if last_select_strat == 'top_n' and iteration+1 < num_setfit_iterations:
                     self.model.reset_model_body()
                 
             x_train, y_train, labels_train, training_indices, probs_train = self.data_selector(train_dataset["text"], probs, embeds,
                                                                                   labels=labels,
-                                                                                  n=samples_per_label_roadmap[i],
-                                                                                  selection_strategy=selection_strategy_roadmap[i],
+                                                                                  n=samples_per_label_roadmap[iteration],
+                                                                                  selection_strategy=selection_strategy_roadmap[iteration],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             # print(type(y_train),y_train)
 
@@ -388,11 +408,11 @@ class ZeroBERToTrainer(SetFitTrainer):
             # last_shot_training_data.append(list(zip(x_train, y_train, labels_train, training_indices, probs_train)))
              # if demanded and train_dataset["label"], report metrics on the performance of the selection
             if return_history and labels:
-                current_metric = {f"data_selector-{i+1}":self._predict_metrics(y_train, labels_train)}
+                current_metric = {f"data_selector-{iteration+1}":self._predict_metrics(y_train, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 # Save data_selector_moment
-                data_selector_tuple = (probs, embeds, labels, selection_strategy_roadmap[i], [] if allow_resampling else training_indices, original_logits)
-                with open(self.experiment_name + "_" + f"data_selector-{i+1}" + '.pickle', 'wb') as handle:
+                data_selector_tuple = (probs, embeds, labels, selection_strategy_roadmap[iteration], [] if allow_resampling else training_indices, original_logits)
+                with open(self.experiment_name + "_" + f"data_selector-{iteration+1}" + '.pickle', 'wb') as handle:
                     pickle.dump(data_selector_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
                 training_history.append(current_metric)
@@ -401,44 +421,75 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             max_probs = ([max(probs) for probs in probs])
             
-            print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+            this_mean = torch.mean(torch.stack(max_probs))
+            this_std = torch.std(torch.stack(max_probs))
+
+            print("mean:",float(this_mean),"-- std:",float(this_std))
             if update_embeddings:
                 embeds = new_embeds
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(probs, axis=-1)
                 _, label_embeds = self.model.predict_proba(self.model.first_shot_model.classes_list, return_embeddings=True)
-                current_metric = {f"full_train_setfit_iteration-{i+1}":self._predict_metrics(y_pred, labels), f"unsup_full_train_setfit_iteration-{i+1}":self.unsup_evaluator(new_embeds, probs, label_embeds, original_logits)}
+                current_metric = {f"full_train_setfit_iteration-{iteration+1}":self._predict_metrics(y_pred, labels), f"unsup_full_train_setfit_iteration-{iteration+1}":self.unsup_evaluator(new_embeds, probs, label_embeds, original_logits)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
 
                 current_probs = self.model.predict_proba(x_train, return_embeddings=False)
                 current_pred = torch.argmax(current_probs, axis=-1)
-                current_metric = {f"cur_train_setfit_iteration-{i + 1}": self._predict_metrics(current_pred, labels_train)}
+
+                max_probs = ([max(probs) for probs in current_probs])
+
+                ds_last_mean = torch.mean(torch.tensor(max_probs))
+                ds_last_std = torch.std(torch.tensor(max_probs))
+
+                print("mean:",float(ds_last_mean),"-- std:",float(ds_last_std))
+                current_metric = {f"cur_train_setfit_iteration-{iteration+ 1}": self._predict_metrics(current_pred, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds = self.model.predict_proba(eval_dataset["text"], return_embeddings=True)
                     max_probs = ([max(probs) for probs in test_probs])
                     
-                    print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+                    eval_last_mean = torch.mean(torch.stack(max_probs))
+                    eval_last_std = torch.std(torch.stack(max_probs))
+
+                    print("mean:",float(eval_last_mean),"-- std:",float(eval_last_std))
                     y_pred = torch.argmax(test_probs, axis=-1)
-                    current_metric = {f"eval_setfit_iteration-{i+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{i+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
+                    current_metric = {f"eval_setfit_iteration-{iteration+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{iteration+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
                     saving_tuple = (new_embeds, probs, labels, test_embeds, test_probs, eval_dataset["label"])
-                    with open("dim_" + self.experiment_name + "_" + f"full_train_setfit_iteration-{i+1}" + '.pickle','wb') as handle:
+                    with open("dim_" + self.experiment_name + "_" + f"full_train_setfit_iteration-{iteration+1}" + '.pickle','wb') as handle:
                         pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
-            if reset_model_head and i+1 < num_setfit_iterations:
+            if reset_model_head and iteration+1 < num_setfit_iterations:
                 self.model.reset_model_head()
-            print(f"Iteration {i+1} time: {round(time.time()-ti_setfit,2)}")
 
-            # if not self.data_selector.keep_training:
-            #     print("Training stopped because no clusters were found on last iteration.")
-            #     break
+            if this_mean < last_mean-growth_threshold and this_std < last_std:
+                self.data_selector.keep_training = False
+
+            elif this_mean < last_mean+growth_threshold and this_std < last_std+growth_threshold:
+                n_to_add = samples_per_label_roadmap[-1] * (1/self.growth_rate)
+                samples_per_label_roadmap.append(int(n_to_add))
+
+            else:
+                n_to_add = samples_per_label_roadmap[-1] * (self.growth_rate)
+                samples_per_label_roadmap.append(int(n_to_add))
+
+            last_mean = this_mean
+            last_std = this_std
+            if n_to_add < self.starting_n:
+                self.data_selector.keep_training = False
+            print(f"Updated roadmap: {samples_per_label_roadmap}")
+            print(f"Iteration {iteration+1} time: {round(time.time()-ti_setfit,2)}")
 
 
+            if not self.data_selector.keep_training:
+                print("Training stopped because stop criteria was met.")
+                break
+
+        
 
         # print(f"********** Running Last Shot **********") ##########################
 

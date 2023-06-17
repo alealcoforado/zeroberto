@@ -107,8 +107,16 @@ def arg_parse() -> argparse.Namespace:
     ) 
     parser.add_argument(
         "--auto",help="If True, will automatically set hyperparameters.", default=False,action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(
+        "--growth_rate",help="The multiplier on n for each iteration", default=2,type=int
     ) 
-
+    parser.add_argument(
+        "--growth_threshold",help="The margin for stopping the training procedure", default=0.05,type=float
+    ) 
+    parser.add_argument(
+        "--starting_n",help="The margin for stopping the training procedure", default=8,type=int
+    )
     args = parser.parse_args()
     return args
 
@@ -125,7 +133,9 @@ def main():
     train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
-
+    growth_rate = args.growth_rate
+    growth_threshold = args.growth_threshold
+    starting_n = args.starting_n
     # Define experiment name
     dataset_name = args.dataset.split("/")[-1]
     current_dateTime = str(datetime.now())
@@ -252,7 +262,11 @@ def main():
         freeze_body=args.freeze_body,
         train_first_shot = train_first_shot or args.train_first_shot,
         allow_resampling=args.allow_resampling,
-        experiment_name=experiment_name
+        experiment_name=experiment_name,
+        growth_rate=growth_rate,
+        growth_threshold = growth_threshold,
+        starting_n = starting_n,
+        selection_strategy=args.selection_strategy
     )
 
     hyperparameters = {}
@@ -281,6 +295,9 @@ def main():
     hyperparameters['freeze_body'] = args.freeze_body
     hyperparameters['train_first_shot'] = train_first_shot or args.train_first_shot
     hyperparameters['allow_resampling'] = args.allow_resampling
+    hyperparameters['growth_rate'] = growth_rate
+    hyperparameters['growth_threshold'] = growth_threshold
+    hyperparameters['starting_n'] = starting_n
     print(hyperparameters)
     # Body training
 
