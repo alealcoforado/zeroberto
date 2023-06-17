@@ -470,15 +470,15 @@ class ZeroBERToTrainer(SetFitTrainer):
             print(this_mean,last_mean)
             if iteration==0:
                 n_to_add = self.starting_n+1
-            elif this_mean < last_mean-growth_threshold:
+            elif float(this_mean) < float(last_mean)-growth_threshold:
                 print("State 4: Hard stop to prevent overfitting.")
                 self.data_selector.keep_training = False
-            elif this_mean < last_mean:
+            elif float(this_mean) < float(last_mean):
                 print("State 2: Cautious.")
                 n_to_add = samples_per_label_roadmap[-1]
                 samples_per_label_roadmap.append(int(n_to_add))
 
-            elif this_mean < last_mean+growth_threshold and this_std < last_std+growth_threshold:
+            elif float(this_mean) < float(last_mean)+growth_threshold and float(this_std) < float(last_std)+growth_threshold:
                 print("State 3: Not learning enough.")
                 n_to_add = samples_per_label_roadmap[-1] * (1/self.growth_rate)
                 samples_per_label_roadmap.append(int(n_to_add))
