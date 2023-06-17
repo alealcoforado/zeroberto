@@ -468,7 +468,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.reset_model_head()
             
             if iteration==0:
-                n_to_add = 0
+                n_to_add = self.starting_n+1
             elif this_mean < last_mean-growth_threshold:
                 print("State 4: Hard stop to prevent overfitting.")
                 self.data_selector.keep_training = False
