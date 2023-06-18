@@ -223,7 +223,6 @@ def main():
     data_selector = ZeroBERToDataSelector(selection_strategy=args.selection_strategy)
 
     print("Start training")
-# !python /content/zeroberto/train_eval.py --hypothesis_template="This text is {}." --dataset='SetFit/ag_news' --var_samples_per_label 8 16 32 48 64 --num_setfit_iterations=5 --body_learning_rate=0.5e-05 --var_selection_strategy 'top_n' 'intraclass_clustering' 'top_n' 'intraclass_clustering' 'top_n' --train_first_shot
     
     if args.auto:
         var_samples_per_label = [8, 16, 32, 48, 64, 128]

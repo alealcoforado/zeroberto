@@ -124,15 +124,15 @@ class ZeroBERToDataSelector:
         if not selection_strategy:
             selection_strategy = self.selection_strategy
         if selection_strategy == 'first_shot':
-            return self._get_first_shot_roadmap('hdbscan',embeddings,leaf_size,min_cluster_size)
+            return self._clusterer_fit_predict('hdbscan',embeddings,leaf_size,min_cluster_size)
         if selection_strategy == "top_n" or selection_strategy == "tn" :
             return self._get_top_n_data(text_list, probabilities, labels, n, discard_indices)
         if selection_strategy == "intraclass_clustering" or selection_strategy == 'ic':
             return self._get_intraclass_clustering_data(text_list, probabilities, labels, embeddings, n, discard_indices)
-    def _get_first_shot_roadmap(self, clusterer, embeddings, leaf_size, min_cluster_size):
-        clusters = self._clusterer_fit_predict(clusterer,embeddings,leaf_size,min_cluster_size)
-        print(len(clusters))
-        return clusters
+    # def _get_first_shot_roadmap(self, clusterer, embeddings, leaf_size, min_cluster_size):
+    #     clusters = self._clusterer_fit_predict(clusterer,embeddings,leaf_size,min_cluster_size)
+    #     print(len(clusters))
+    #     return clusters
     def _get_top_n_data(self, text_list, probs,labels,n,discard_indices = []):
         # QUESTION: está certo ou deveria pegar os top n de cada classe? faz diferença?
         # Aqui permite que o mesmo exemplo entre para duas classes
@@ -233,8 +233,8 @@ class ZeroBERToDataSelector:
         clusters = clusterer_model.fit_predict(embeds)
         # logger.info("Found {} clusters.".format(len(list(set(clusters)))))
         num_of_clusters = len(list(set(clusters)))
-        if num_of_clusters!= 1:
-            self.keep_training = True
+        # if num_of_clusters!= 1:
+        #     self.keep_training = True
         print(f"Found {num_of_clusters} clusters.")
         return torch.IntTensor(clusters)
 
