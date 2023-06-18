@@ -368,11 +368,21 @@ class ZeroBERToTrainer(SetFitTrainer):
                     #     pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
+        print("Clustering all classes.")
+        fs_clusters = self.data_selector(None, None, embeds,
+                                                                                labels=labels,
+                                                                                n=1,
+                                                                                selection_strategy='first_shot')
+        
+        num_setfit_iterations = min(max(len(fs_clusters.unique()),2),5)
 
         ### growth_rate
-        samples_per_label_roadmap = [self.starting_n, self.starting_n*growth_rate]
+        samples_per_label_roadmap = [self.starting_n]
+        for i in range(10):
+            samples_per_label_roadmap.append(samples_per_label_roadmap[-1]*growth_rate)
+        samples_per_label_roadmap = samples_per_label_roadmap[0:num_setfit_iterations]
         print(samples_per_label_roadmap)
-        selection_strategy_roadmap = (['tn','ic']*10) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*20) 
+        selection_strategy_roadmap = ((['tn','ic']*10)[0:num_setfit_iterations]) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*num_setfit_iterations) 
         print(selection_strategy_roadmap)
         # samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
         # selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
@@ -383,6 +393,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         # Iterations of setfit
         t0_setfit = time.time()
         probs = trained_probs if self.train_first_shot else raw_probs
+
+
         
         for iteration,_ in enumerate(samples_per_label_roadmap):
             print(f"********** Running SetFit Iteration {iteration+1} **********")
@@ -399,12 +411,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   selection_strategy=selection_strategy_roadmap[iteration],
                                                                                   discard_indices=[] if allow_resampling else training_indices)
             # print(type(y_train),y_train)
-            print("Clustering all classes.")
-            fs_clusters = self.data_selector(None, None, embeds,
-                                                                                  labels=labels,
-                                                                                  n=1,
-                                                                                  selection_strategy='first_shot',
-                                                                                  discard_indices=[] if allow_resampling else training_indices)
+
 
             # if self.train_first_shot:
             #     x_train_fs, y_train_fs = self._build_first_shot_dataset()
@@ -502,47 +509,47 @@ class ZeroBERToTrainer(SetFitTrainer):
                 self.model.reset_model_head()
             
             # print(this_mean,last_mean,growth_threshold)
-            if iteration==0:
-                n_to_add = self.starting_n+1
+            # if iteration==0:
+            #     n_to_add = self.starting_n+1
 
-            elif float(this_mean) < float(last_mean)-growth_threshold:
-                state = 4
-                print(f"State {state}: Hard stop to prevent overfitting.")
-                self.data_selector.keep_training = False
+            # elif float(this_mean) < float(last_mean)-growth_threshold:
+            #     state = 4
+            #     print(f"State {state}: Hard stop to prevent overfitting.")
+            #     self.data_selector.keep_training = False
 
-            elif float(this_mean) > float(last_mean)+growth_threshold and float(this_std) < float(last_std)+growth_threshold:
-                state = 5
-                print(f"State {state}: Cautious.")
-                n_to_add = samples_per_label_roadmap[-1] * (1/(self.growth_rate))
-                samples_per_label_roadmap.append(int(n_to_add))
+            # elif float(this_mean) > float(last_mean)+growth_threshold and float(this_std) < float(last_std)+growth_threshold:
+            #     state = 5
+            #     print(f"State {state}: Cautious.")
+            #     n_to_add = samples_per_label_roadmap[-1] * (1/(self.growth_rate))
+            #     samples_per_label_roadmap.append(int(n_to_add))
                 
 
-            elif float(this_mean) < float(last_mean)+growth_threshold or float(this_std) < float(last_std)+growth_threshold:
-                state = 3
-                print(f"State {state}: Not learning enough.")
-                n_to_add = samples_per_label_roadmap[-1] * (1/(self.growth_rate)**2)
-                samples_per_label_roadmap.append(int(n_to_add))
+            # elif float(this_mean) < float(last_mean)+growth_threshold or float(this_std) < float(last_std)+growth_threshold:
+            #     state = 3
+            #     print(f"State {state}: Not learning enough.")
+            #     n_to_add = samples_per_label_roadmap[-1] * (1/(self.growth_rate)**2)
+            #     samples_per_label_roadmap.append(int(n_to_add))
 
-            elif float(this_mean) < float(last_mean):
-                state=2
-                print(f"State {state}: Cautious.")
-                n_to_add = samples_per_label_roadmap[-1]
-                samples_per_label_roadmap.append(int(n_to_add))
-            else:
-                state = 1
-                print(f"State {state}: Adding more data.")
-                n_to_add = samples_per_label_roadmap[-1] * (self.growth_rate)
-                samples_per_label_roadmap.append(int(n_to_add))
+            # elif float(this_mean) < float(last_mean):
+            #     state=2
+            #     print(f"State {state}: Cautious.")
+            #     n_to_add = samples_per_label_roadmap[-1]
+            #     samples_per_label_roadmap.append(int(n_to_add))
+            # else:
+            #     state = 1
+            #     print(f"State {state}: Adding more data.")
+            #     n_to_add = samples_per_label_roadmap[-1] * (self.growth_rate)
+            #     samples_per_label_roadmap.append(int(n_to_add))
 
-            last_mean = this_mean
-            last_std = this_std
-            if n_to_add <= self.starting_n:
-                self.data_selector.keep_training = False
+            # last_mean = this_mean
+            # last_std = this_std
+            # if n_to_add <= self.starting_n:
+            #     self.data_selector.keep_training = False
 
             print(f"Iteration {iteration+1} time: {round(time.time()-ti_setfit,2)}")
 
             if not self.data_selector.keep_training:
-                print(f"Training stopped because stop criteria was met. State {state}")
+                print(f"Training stopped because stop criteria was met.")
                 break
 
             print(f"Updated roadmap: {samples_per_label_roadmap}")
