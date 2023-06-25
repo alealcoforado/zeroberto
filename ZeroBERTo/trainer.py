@@ -381,7 +381,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                 selection_strategy='first_shot',
                                                                                 min_cluster_size=min_cluster_size)
         
-        num_setfit_iterations = min(max(len(fs_clusters.unique()),2),5)
+        num_setfit_iterations = min(max(len(fs_clusters.unique()),2),10)
 
         ### growth_rate
         samples_per_label_roadmap = [self.starting_n]

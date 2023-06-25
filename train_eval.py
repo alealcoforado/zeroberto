@@ -111,11 +111,11 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--growth_rate",help="The multiplier on n for each iteration", default=2,type=int
     ) 
+    # parser.add_argument(
+    #     "--growth_threshold",help="The margin for stopping the training procedure", default=0.05,type=float
+    # ) 
     parser.add_argument(
-        "--growth_threshold",help="The margin for stopping the training procedure", default=0.05,type=float
-    ) 
-    parser.add_argument(
-        "--starting_n",help="The margin for stopping the training procedure", default=8,type=int
+        "--starting_n",help="The initial number of samples", default=8,type=int
     )
     parser.add_argument(
         "--cluster_permissiveness",help="How small the clusters can be.", default=100.0,type=float
@@ -132,13 +132,13 @@ def main():
     dataset = load_dataset(args.dataset)
     train_dataset_size = min(len(dataset[args.dataset_train_split]), args.train_dataset_size)
     # print(f"Train dataset size: {train_dataset_size}")
-    random_seed = args.random_seed
-    train_dataset = dataset[args.dataset_train_split].shuffle(seed=random_seed).select(range(0,train_dataset_size))
+
+    train_dataset = dataset[args.dataset_train_split].shuffle(seed=args.random_seed).select(range(0,train_dataset_size))
     # args.dataset_test_split = "test" # TO DO remove
     test_dataset = dataset[args.dataset_test_split]#.select(range(0,200))
-    growth_rate = args.growth_rate
-    growth_threshold = args.growth_threshold
-    starting_n = args.starting_n
+    # growth_rate = args.growth_rate
+    # growth_threshold = args.growth_threshold
+    # starting_n = args.starting_n
     # Define experiment name
     dataset_name = args.dataset.split("/")[-1]
     current_dateTime = str(datetime.now())
@@ -253,7 +253,7 @@ def main():
         num_iterations=  args.num_iterations,
         num_setfit_iterations=num_setfit_iterations or args.num_setfit_iterations,
         num_epochs=args.num_epochs,
-        seed=random_seed,
+        seed=args.random_seed,
         column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
@@ -266,9 +266,9 @@ def main():
         train_first_shot = train_first_shot or args.train_first_shot,
         allow_resampling=args.allow_resampling,
         experiment_name=experiment_name,
-        growth_rate=growth_rate,
+        growth_rate=args.growth_rate,
         # growth_threshold = growth_threshold,
-        starting_n = starting_n,
+        starting_n = args.starting_n,
         selection_strategy=args.selection_strategy,
         cluster_permissiveness = args.cluster_permissiveness
     )
@@ -277,7 +277,7 @@ def main():
     hyperparameters['model_name_or_path'] = args.model_name_or_path
     hyperparameters['dataset'] = args.dataset
     hyperparameters['train_dataset_size'] = train_dataset_size
-    hyperparameters['random_seed'] = random_seed
+    hyperparameters['random_seed'] = args.random_seed
     hyperparameters['dataset_train_split'] = args.dataset_train_split
     hyperparameters['dataset_test_split'] = args.dataset_test_split
     hyperparameters['hypothesis_template'] = args.hypothesis_template
@@ -299,9 +299,9 @@ def main():
     hyperparameters['freeze_body'] = args.freeze_body
     hyperparameters['train_first_shot'] = train_first_shot or args.train_first_shot
     hyperparameters['allow_resampling'] = args.allow_resampling
-    hyperparameters['growth_rate'] = growth_rate
-    hyperparameters['growth_threshold'] = growth_threshold
-    hyperparameters['starting_n'] = starting_n
+    hyperparameters['growth_rate'] = args.growth_rate
+    # hyperparameters['growth_threshold'] = args.growth_threshold
+    hyperparameters['starting_n'] = args.starting_n
     hyperparameters['cluster_permissiveness'] = args.cluster_permissiveness
 
 
