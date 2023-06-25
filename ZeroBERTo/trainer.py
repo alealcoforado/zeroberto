@@ -313,7 +313,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             last_mean = torch.mean(torch.stack(max_probs))
             last_std = torch.std(torch.stack(max_probs))
 
-            print("mean:",float(last_mean),"-- std:",float(last_std))
+            # print("mean:",float(last_mean),"-- std:",float(last_std))
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
 
             # if demanded and train_dataset["label"], report metrics on the performance of the model
@@ -327,7 +327,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 if eval_dataset and eval_labels:
                     test_probs, test_embeds, test_original_logits = self.model.first_shot_model(eval_dataset["text"], return_embeddings=True, return_logits=True)
                     max_probs = ([max(probs) for probs in test_probs])
-                    print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+                    # print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
 
                     # print("raw:",test_probs)
                     y_pred = torch.argmax(test_probs, axis=-1)
@@ -354,7 +354,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             last_mean = torch.mean(torch.stack(max_probs))
             last_std = torch.std(torch.stack(max_probs))
 
-            print("mean:",float(last_mean),"-- std:",float(last_std))
+            # print("mean:",float(last_mean),"-- std:",float(last_std))
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
             if return_history and labels:
                 y_pred = torch.argmax(trained_probs, axis=-1)
@@ -447,7 +447,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             this_mean = torch.mean(torch.stack(max_probs))
             this_std = torch.std(torch.stack(max_probs))
 
-            print("mean:",float(this_mean),"-- std:",float(this_std))
+            # print("mean:",float(this_mean),"-- std:",float(this_std))
             if update_embeddings:
                 embeds = new_embeds
             # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model on train set
@@ -466,7 +466,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 ds_last_mean = torch.mean(torch.tensor(max_probs))
                 ds_last_std = torch.std(torch.tensor(max_probs))
 
-                print("mean:",float(ds_last_mean),"-- std:",float(ds_last_std))
+                # print("mean:",float(ds_last_mean),"-- std:",float(ds_last_std))
                 current_metric = {f"cur_train_setfit_iteration-{iteration+ 1}": self._predict_metrics(current_pred, labels_train)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 training_history.append(current_metric)
@@ -483,7 +483,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     if eval_dataset and eval_labels:
                         test_probs, test_embeds, test_original_logits = self.model.first_shot_model(eval_dataset["text"], return_embeddings=True, return_logits=True)
                         max_probs = ([max(probs) for probs in test_probs])
-                        print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
+                        # print("mean:",float(torch.mean(torch.stack(max_probs))),"-- std:",float(torch.std((torch.stack(max_probs)))))
 
                         # print("raw:",test_probs)
                         y_pred = torch.argmax(test_probs, axis=-1)
@@ -504,7 +504,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     eval_last_mean = torch.mean(torch.stack(max_probs))
                     eval_last_std = torch.std(torch.stack(max_probs))
 
-                    print("mean:",float(eval_last_mean),"-- std:",float(eval_last_std))
+                    # print("mean:",float(eval_last_mean),"-- std:",float(eval_last_std))
                     y_pred = torch.argmax(test_probs, axis=-1)
                     current_metric = {f"eval_setfit_iteration-{iteration+1}": self._predict_metrics(y_pred, eval_dataset["label"]), f"unsup_eval_setfit_iteration-{iteration+1}":self.unsup_evaluator(test_embeds, test_probs, label_embeds, test_original_logits)}
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
