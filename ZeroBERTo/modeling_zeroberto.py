@@ -119,6 +119,8 @@ class ZeroBERToDataSelector:
     def __init__(self, selection_strategy="top_n"):
         self.selection_strategy = selection_strategy
         self.keep_training = True
+        # cluster_permissiveness: Optional[float] = 100.0,
+
 
     def __call__(self, text_list, probabilities, embeddings, labels=None, n=8, discard_indices = [], selection_strategy=None,min_cluster_size=10,leaf_size=20):
         if not selection_strategy:
@@ -222,7 +224,7 @@ class ZeroBERToDataSelector:
         y_train = label_results[selected_data].tolist()
         labels_train = [true_labels[i] for i in selected_data]
         probs_train = [probabilities[i] for i in selected_data]
-
+ 
         # print(list(zip(y_train,labels_train)))
         return x_train, y_train, labels_train, selected_data, probs_train
 

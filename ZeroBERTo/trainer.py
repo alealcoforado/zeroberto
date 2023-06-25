@@ -65,7 +65,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             growth_rate: int = 2,
             starting_n: int = 8,
             growth_threshold: float = 0.05,
-            selection_strategy: str = 'top_n'
+            selection_strategy: str = 'top_n',
+            cluster_permissiveness: float = 100.0,
 
 
     ):
@@ -103,6 +104,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.starting_n = starting_n
         self.selection_strategy = selection_strategy
         self.growth_threshold = growth_threshold
+        self.cluster_permissiveness = cluster_permissiveness
 
         # if self.var_samples_per_label is not None:
         #     assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
@@ -147,6 +149,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             growth_rate: int = 2,
             growth_threshold: float = 0.05,
             starting_n: int = 8,
+            
 
     ):
         """
@@ -207,6 +210,9 @@ class ZeroBERToTrainer(SetFitTrainer):
         num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
         train_first_shot = train_first_shot or self.train_first_shot
 
+        print(len(self.model.first_shot_model.classes_list))
+        min_cluster_size = int(( len(train_dataset) / (4) ) / self.cluster_permissiveness)
+        print(f"Min cluster size: {min_cluster_size}")
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
         learning_rate = learning_rate or self.learning_rate
@@ -309,8 +315,8 @@ class ZeroBERToTrainer(SetFitTrainer):
 
             print("mean:",float(last_mean),"-- std:",float(last_std))
             print(f"1st shot - cosine product time: {round(time.time()-t0,2)} seconds")
-            # self.data_selector(None, None, embeds,selection_strategy='first_shot')            
-            # # TO DO: if demanded and train_dataset["label"], report metrics on the performance of the model
+
+            # if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(raw_probs, axis=-1)
                 _, label_embeds = self.model.first_shot_model(self.model.first_shot_model.classes_list, return_embeddings=True)
@@ -372,7 +378,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         fs_clusters = self.data_selector(None, None, embeds,
                                                                                 labels=labels,
                                                                                 n=1,
-                                                                                selection_strategy='first_shot')
+                                                                                selection_strategy='first_shot',
+                                                                                min_cluster_size=min_cluster_size)
         
         num_setfit_iterations = min(max(len(fs_clusters.unique()),2),5)
 
@@ -409,7 +416,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                   labels=labels,
                                                                                   n=samples_per_label_roadmap[iteration],
                                                                                   selection_strategy=selection_strategy_roadmap[iteration],
-                                                                                  discard_indices=[] if allow_resampling else training_indices)
+                                                                                  discard_indices=[] if allow_resampling else training_indices,
+                                                                                  min_cluster_size=min_cluster_size)
             # print(type(y_train),y_train)
 
 

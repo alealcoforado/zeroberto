@@ -117,6 +117,9 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--starting_n",help="The margin for stopping the training procedure", default=8,type=int
     )
+    parser.add_argument(
+        "--cluster_permissiveness",help="How small the clusters can be.", default=100.0,type=float
+    )
     args = parser.parse_args()
     return args
 
@@ -241,6 +244,7 @@ def main():
     # Build trainer
     trainer = ZeroBERToTrainer(
         model=model,
+        # classes_list = classes_list,
         data_selector=data_selector,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
@@ -263,9 +267,10 @@ def main():
         allow_resampling=args.allow_resampling,
         experiment_name=experiment_name,
         growth_rate=growth_rate,
-        growth_threshold = growth_threshold,
+        # growth_threshold = growth_threshold,
         starting_n = starting_n,
-        selection_strategy=args.selection_strategy
+        selection_strategy=args.selection_strategy,
+        cluster_permissiveness = args.cluster_permissiveness
     )
 
     hyperparameters = {}
@@ -297,6 +302,8 @@ def main():
     hyperparameters['growth_rate'] = growth_rate
     hyperparameters['growth_threshold'] = growth_threshold
     hyperparameters['starting_n'] = starting_n
+    hyperparameters['cluster_permissiveness'] = args.cluster_permissiveness
+
 
 
     print(hyperparameters)
