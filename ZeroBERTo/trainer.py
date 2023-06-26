@@ -210,8 +210,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
         train_first_shot = train_first_shot or self.train_first_shot
 
-        print(len(self.model.first_shot_model.classes_list))
-        min_cluster_size = int(( len(train_dataset) / (4) ) / self.cluster_permissiveness)
+        min_cluster_size = max(int(( len(train_dataset) / (4) ) / self.cluster_permissiveness),1)
         print(f"Min cluster size: {min_cluster_size}")
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
@@ -344,6 +343,31 @@ class ZeroBERToTrainer(SetFitTrainer):
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
         
+        print("Clustering all classes.")
+        fs_clusters = self.data_selector(None, None, embeds,
+                                                                                labels=labels,
+                                                                                n=1,
+                                                                                selection_strategy='first_shot',
+                                                                                min_cluster_size=min_cluster_size)
+        
+        ### growth_rate
+        num_setfit_iterations = len(fs_clusters.unique())
+
+        samples_per_label_roadmap = [self.starting_n]
+        for i in range(num_setfit_iterations-1):
+            samples_per_label_roadmap.append(samples_per_label_roadmap[-1]*growth_rate)
+        samples_per_label_roadmap = [el for el in samples_per_label_roadmap[0:num_setfit_iterations] if el < (len(self.train_dataset) / len(self.model.first_shot_model.classes_list))]
+
+        num_setfit_iterations = len(samples_per_label_roadmap)
+
+        selection_strategy_roadmap = ((['tn','ic']*10)[0:num_setfit_iterations]) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*num_setfit_iterations) 
+
+
+        training_indices = []
+        last_shot_training_data = []
+        print(f"Data Selector roadmap: {samples_per_label_roadmap}")
+        print(f"Selection Strategy roadmap: {selection_strategy_roadmap}")
+
         if self.model.first_shot_model and self.train_first_shot:
             x_train, y_train = self._build_first_shot_dataset()
             print(f'1st shot Dataset: {x_train}')
@@ -374,29 +398,6 @@ class ZeroBERToTrainer(SetFitTrainer):
                     #     pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # probs, embeds = self.model.first_shot_model(train_dataset["text"], return_embeddings=True)
 
-        print("Clustering all classes.")
-        fs_clusters = self.data_selector(None, None, embeds,
-                                                                                labels=labels,
-                                                                                n=1,
-                                                                                selection_strategy='first_shot',
-                                                                                min_cluster_size=min_cluster_size)
-        
-        num_setfit_iterations = min(max(len(fs_clusters.unique()),2),10)
-
-        ### growth_rate
-        samples_per_label_roadmap = [self.starting_n]
-        for i in range(10):
-            samples_per_label_roadmap.append(samples_per_label_roadmap[-1]*growth_rate)
-        samples_per_label_roadmap = samples_per_label_roadmap[0:num_setfit_iterations]
-        print(samples_per_label_roadmap)
-        selection_strategy_roadmap = ((['tn','ic']*10)[0:num_setfit_iterations]) if self.selection_strategy == 'alternate' else ([self.selection_strategy]*num_setfit_iterations) 
-        print(selection_strategy_roadmap)
-        # samples_per_label_roadmap = self.var_samples_per_label if self.var_samples_per_label is not None else list(np.repeat(self.samples_per_label,num_setfit_iterations))
-        # selection_strategy_roadmap = self.var_selection_strategy if self.var_selection_strategy else num_setfit_iterations*[None]
-
-        training_indices = []
-        last_shot_training_data = []
-        print(f"Data Selector roadmap: {samples_per_label_roadmap}")
         # Iterations of setfit
         t0_setfit = time.time()
         probs = trained_probs if self.train_first_shot else raw_probs
@@ -435,8 +436,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                 # Save data_selector_moment
                 data_selector_tuple = (probs, embeds, labels, selection_strategy_roadmap[iteration], [] if allow_resampling else training_indices, original_logits)
-                with open(self.experiment_name + "_" + f"data_selector-{iteration+1}" + '.pickle', 'wb') as handle:
-                    pickle.dump(data_selector_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                # with open(self.experiment_name + "_" + f"data_selector-{iteration+1}" + '.pickle', 'wb') as handle:
+                #     pickle.dump(data_selector_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
                 training_history.append(current_metric)
             train_setfit_iteration()
@@ -510,8 +511,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                     print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
                     training_history.append(current_metric)
                     saving_tuple = (new_embeds, probs, labels, test_embeds, test_probs, eval_dataset["label"])
-                    with open("dim_" + self.experiment_name + "_" + f"full_train_setfit_iteration-{iteration+1}" + '.pickle','wb') as handle:
-                        pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    # with open("dim_" + self.experiment_name + "_" + f"full_train_setfit_iteration-{iteration+1}" + '.pickle','wb') as handle:
+                    #     pickle.dump(saving_tuple, handle, protocol=pickle.HIGHEST_PROTOCOL)
             # TO DO: if test_dataset, report metrics on the performance of the model on test set
             if reset_model_head and iteration+1 < num_setfit_iterations:
                 self.model.reset_model_head()
@@ -560,7 +561,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                 print(f"Training stopped because stop criteria was met.")
                 break
 
-            print(f"Updated roadmap: {samples_per_label_roadmap}")
+            # print(f"Updated roadmap: {samples_per_label_roadmap}")
         
 
         # print(f"********** Running Last Shot **********") ##########################
