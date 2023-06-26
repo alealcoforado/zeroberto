@@ -109,7 +109,7 @@ def arg_parse() -> argparse.Namespace:
         "--auto",help="If True, will automatically set hyperparameters.", default=False,action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
-        "--growth_rate",help="The multiplier on n for each iteration", default=2,type=int
+        "--growth_rate",help="The multiplier on n for each iteration", default=2.0,type=float
     ) 
     # parser.add_argument(
     #     "--growth_threshold",help="The margin for stopping the training procedure", default=0.05,type=float

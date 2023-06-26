@@ -62,9 +62,9 @@ class ZeroBERToTrainer(SetFitTrainer):
             train_first_shot: bool = False,
             allow_resampling: bool = False,
             experiment_name: str = "training_zeroberto",
-            growth_rate: int = 2,
+            growth_rate: float = 2.0,
             starting_n: int = 8,
-            growth_threshold: float = 0.05,
+            # growth_threshold: float = 0.05,
             selection_strategy: str = 'top_n',
             cluster_permissiveness: float = 100.0,
 
@@ -103,7 +103,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.growth_rate = growth_rate
         self.starting_n = starting_n
         self.selection_strategy = selection_strategy
-        self.growth_threshold = growth_threshold
+        # self.growth_threshold = growth_threshold
         self.cluster_permissiveness = cluster_permissiveness
 
         # if self.var_samples_per_label is not None:
@@ -146,8 +146,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             allow_resampling: bool = False,
             update_embeddings: bool = False,
             train_first_shot: bool = False,
-            growth_rate: int = 2,
-            growth_threshold: float = 0.05,
+            growth_rate: float = 2.0,
+            # growth_threshold: float = 0.05,
             starting_n: int = 8,
             
 
@@ -192,7 +192,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         self._validate_column_mapping(self.train_dataset)
         train_dataset = self.train_dataset
         eval_dataset = self.eval_dataset
-        growth_threshold = self.growth_threshold or growth_threshold
+        # growth_threshold = self.growth_threshold or growth_threshold
 
         if self.column_mapping is not None:
             # logger.info("Applying column mapping to training dataset")
@@ -318,6 +318,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             # if demanded and train_dataset["label"], report metrics on the performance of the model
             if return_history and labels:
                 y_pred = torch.argmax(raw_probs, axis=-1)
+
                 _, label_embeds = self.model.first_shot_model(self.model.first_shot_model.classes_list, return_embeddings=True)
                 current_metric = {"full_train_raw_first_shot":self._predict_metrics(y_pred, labels), "unsup_full_train_raw_first_shot":self.unsup_evaluator(embeds, raw_probs, label_embeds, original_logits)}
                 print(list(current_metric.keys())[0], "----- accuracy:",current_metric[list(current_metric.keys())[0]]['weighted']['accuracy'])
@@ -355,8 +356,9 @@ class ZeroBERToTrainer(SetFitTrainer):
 
         samples_per_label_roadmap = [self.starting_n]
         for i in range(num_setfit_iterations-1):
-            samples_per_label_roadmap.append(samples_per_label_roadmap[-1]*growth_rate)
-        samples_per_label_roadmap = [el for el in samples_per_label_roadmap[0:num_setfit_iterations] if el < (len(self.train_dataset) / len(self.model.first_shot_model.classes_list))]
+            new_element = (samples_per_label_roadmap[-1]*self.growth_rate)
+            samples_per_label_roadmap.append(new_element)
+        samples_per_label_roadmap = [int(el) for el in samples_per_label_roadmap[0:num_setfit_iterations] if el < (len(self.train_dataset) / len(self.model.first_shot_model.classes_list))]
 
         num_setfit_iterations = len(samples_per_label_roadmap)
 
