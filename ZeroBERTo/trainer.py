@@ -42,7 +42,7 @@ class ZeroBERToTrainer(SetFitTrainer):
             metric_kwargs: Optional[Dict[str, Any]] = None,
             loss_class=losses.CosineSimilarityLoss,
             num_iterations: int = 20,
-            num_setfit_iterations: int = 5,
+            num_setfit_iterations: int = 2,
             num_epochs: int = 1,
             num_body_epochs: int = 1,
             learning_rate: float = 2e-5,
@@ -106,9 +106,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         # self.growth_threshold = growth_threshold
         self.cluster_permissiveness = cluster_permissiveness
 
-        # if self.var_samples_per_label is not None:
-        #     assert len(var_samples_per_label) == num_setfit_iterations, "num_setfit_iterations and length of var_samples_per_label must match"
-            # print("Asserting: len(var_samples) = ",len(var_samples_per_label))
+
         if model is None:
             if model_init is not None:
                 model = self.call_model_init()
@@ -210,7 +208,7 @@ class ZeroBERToTrainer(SetFitTrainer):
         num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
         train_first_shot = train_first_shot or self.train_first_shot
 
-        min_cluster_size = max(int(( len(train_dataset) / (4) ) / self.cluster_permissiveness),1)
+        min_cluster_size = max(int(( len(train_dataset) / (4) ) / self.cluster_permissiveness), 2 ) ### minimun cluster size should be > 1
         print(f"Min cluster size: {min_cluster_size}")
         num_setfit_iterations = num_setfit_iterations or self.num_setfit_iterations
         batch_size = batch_size or self.batch_size
@@ -352,8 +350,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                                                                                 min_cluster_size=min_cluster_size)
         
         ### growth_rate
-        num_setfit_iterations = len(fs_clusters.unique())
-
+        num_setfit_iterations = num_setfit_iterations or len(fs_clusters.unique())
+        print(num_setfit_iterations)
         samples_per_label_roadmap = [self.starting_n]
         for i in range(num_setfit_iterations-1):
             new_element = (samples_per_label_roadmap[-1]*self.growth_rate)

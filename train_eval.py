@@ -55,7 +55,7 @@ def arg_parse() -> argparse.Namespace:
         "--num_iterations", type=int, help="Number of pairs to generate on training.", default=20
     )
     parser.add_argument(
-        "--num_setfit_iterations", type=int, help="Number of SetFit training iterations to perform", default=2
+        "--num_setfit_iterations", type=int, help="Number of SetFit training iterations to perform", default=None
     )   
     parser.add_argument(
         "--num_epochs", type=int, help="Number of self-training loop iterations to perform", default=1
@@ -227,18 +227,16 @@ def main():
 
     print("Start training")
     
-    if args.auto:
-        var_samples_per_label = [8, 16, 32, 48, 64, 128]
-        var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n', 'top_n']
-        num_setfit_iterations = 6
-        train_first_shot = True
-    else:
-        var_samples_per_label = None
-        var_selection_strategy = None
-        num_setfit_iterations = None
-        train_first_shot = None
-
-
+    # if args.auto:
+    #     var_samples_per_label = [8, 16, 32, 48, 64, 128]
+    #     var_selection_strategy = ['top_n', 'intraclass_clustering','top_n', 'intraclass_clustering','top_n', 'top_n']
+    #     num_setfit_iterations = 6
+    #     train_first_shot = True
+    # else:
+    #     var_samples_per_label = None
+    #     var_selection_strategy = None
+    #     num_setfit_iterations = None
+    #     train_first_shot = None
 
 
     # Build trainer
@@ -251,19 +249,19 @@ def main():
         metric=compute_metrics_fn,
         loss_class=CosineSimilarityLoss,
         num_iterations=  args.num_iterations,
-        num_setfit_iterations=num_setfit_iterations or args.num_setfit_iterations,
+        num_setfit_iterations=args.num_setfit_iterations,
         num_epochs=args.num_epochs,
         seed=args.random_seed,
         column_mapping=dataset_column_mapping,
         samples_per_label=args.samples_per_label,
         batch_size=args.batch_size,
-        var_samples_per_label=var_samples_per_label or args.var_samples_per_label,
-        var_selection_strategy=var_selection_strategy or args.var_selection_strategy,
+        var_samples_per_label=args.var_samples_per_label,
+        var_selection_strategy=args.var_selection_strategy,
         learning_rate=args.learning_rate,
         body_learning_rate=args.body_learning_rate,
         freeze_head=args.freeze_head,
         freeze_body=args.freeze_body,
-        train_first_shot = train_first_shot or args.train_first_shot,
+        train_first_shot = args.train_first_shot,
         allow_resampling=args.allow_resampling,
         experiment_name=experiment_name,
         growth_rate=args.growth_rate,
@@ -284,20 +282,20 @@ def main():
     hyperparameters['multi_target_strategy'] = args.multi_target_strategy
     hyperparameters['use_differentiable_head'] = args.use_differentiable_head
     hyperparameters['num_iterations'] = args.num_iterations
-    hyperparameters['num_setfit_iterations'] = num_setfit_iterations or args.num_setfit_iterations
+    hyperparameters['num_setfit_iterations'] = args.num_setfit_iterations
     hyperparameters['num_epochs'] = args.num_epochs
     hyperparameters['samples_per_label'] = args.samples_per_label
     hyperparameters['normalize_embeddings'] = args.normalize_embeddings
     hyperparameters['selection_strategy'] = args.selection_strategy
     hyperparameters['batch_size'] = args.batch_size
-    hyperparameters['var_samples_per_label'] = var_samples_per_label or args.var_samples_per_label
-    hyperparameters['var_selection_strategy'] = var_selection_strategy or args.var_selection_strategy
+    hyperparameters['var_samples_per_label'] = args.var_samples_per_label
+    hyperparameters['var_selection_strategy'] = args.var_selection_strategy
     hyperparameters['learning_rate'] = args.learning_rate
     hyperparameters['body_learning_rate'] = args.body_learning_rate
     hyperparameters['num_body_epochs'] = args.num_body_epochs
     hyperparameters['freeze_head'] = args.freeze_head
     hyperparameters['freeze_body'] = args.freeze_body
-    hyperparameters['train_first_shot'] = train_first_shot or args.train_first_shot
+    hyperparameters['train_first_shot'] = args.train_first_shot
     hyperparameters['allow_resampling'] = args.allow_resampling
     hyperparameters['growth_rate'] = args.growth_rate
     # hyperparameters['growth_threshold'] = args.growth_threshold
