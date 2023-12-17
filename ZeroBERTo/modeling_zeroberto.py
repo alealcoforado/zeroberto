@@ -263,6 +263,22 @@ class ZeroBERToModel(SetFitModel):
             #first_shot_model = model_body
         self.model_id = model_id
         self.first_shot_model = first_shot_model
+        
+    def apply_neftune(self, noise_alpha=5):
+        original_embed = self.model_body._modules['0'].auto_model.embeddings.word_embeddings.forward
+
+        def noised_embed(x):
+            if self.model_body.training:
+                embed_init = original_embed(x)
+                dims = torch.tensor(embed_init.size(1) * embed_init.size(2))
+                mag_norm = noise_alpha / torch.sqrt(dims)
+                noise = torch.zeros_like(embed_init).uniform_(-mag_norm, mag_norm)
+                return embed_init + noise
+            else:
+                return original_embed(x)
+
+        # Override the embedding layer with the new function
+        self.model_body._modules['0'].auto_model.embeddings.word_embeddings.forward = noised_embed
 
     @classmethod
     def _from_pretrained( # Done

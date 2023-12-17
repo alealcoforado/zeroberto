@@ -123,6 +123,9 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--maximum_n",help="Maximum number of samples to use as training data", default = 64, type=int
     )
+    parser.add_argument(
+        "--alpha",help="Amplitude of noise to add to embeddings (please refer to NEFTune)", default = 0.00, type=float
+    )
     args = parser.parse_args()
     return args
 
@@ -272,7 +275,8 @@ def main():
         starting_n = args.starting_n,
         maximum_n = args.maximum_n,
         selection_strategy=args.selection_strategy,
-        cluster_permissiveness = args.cluster_permissiveness
+        cluster_permissiveness = args.cluster_permissiveness,
+        noise_level=args.alpha
     )
 
     hyperparameters = {}
@@ -306,6 +310,7 @@ def main():
     hyperparameters['starting_n'] = args.starting_n
     hyperparameters['maximum_n'] = args.maximum_n
     hyperparameters['cluster_permissiveness'] = args.cluster_permissiveness
+    hyperparameters['alpha'] = args.alpha
 
 
 
