@@ -120,6 +120,9 @@ def arg_parse() -> argparse.Namespace:
     parser.add_argument(
         "--cluster_permissiveness",help="How small the clusters can be.", default=100.0,type=float
     )
+    parser.add_argument(
+        "--maximum_n",help="Maximum number of samples to use as training data", default = 64, type=int
+    )
     args = parser.parse_args()
     return args
 
@@ -267,6 +270,7 @@ def main():
         growth_rate=args.growth_rate,
         # growth_threshold = growth_threshold,
         starting_n = args.starting_n,
+        maximum_n = args.maximum_n,
         selection_strategy=args.selection_strategy,
         cluster_permissiveness = args.cluster_permissiveness
     )
@@ -300,6 +304,7 @@ def main():
     hyperparameters['growth_rate'] = args.growth_rate
     # hyperparameters['growth_threshold'] = args.growth_threshold
     hyperparameters['starting_n'] = args.starting_n
+    hyperparameters['maximum_n'] = args.maximum_n
     hyperparameters['cluster_permissiveness'] = args.cluster_permissiveness
 
 

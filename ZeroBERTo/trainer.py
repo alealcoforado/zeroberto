@@ -64,6 +64,8 @@ class ZeroBERToTrainer(SetFitTrainer):
             experiment_name: str = "training_zeroberto",
             growth_rate: float = 2.0,
             starting_n: int = 8,
+            maximum_n: int = 64,
+
             # growth_threshold: float = 0.05,
             selection_strategy: str = 'top_n',
             cluster_permissiveness: float = 100.0,
@@ -102,6 +104,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         self.experiment_name = experiment_name
         self.growth_rate = growth_rate
         self.starting_n = starting_n
+        self.maximum_n = maximum_n
+
         self.selection_strategy = selection_strategy
         # self.growth_threshold = growth_threshold
         self.cluster_permissiveness = cluster_permissiveness
@@ -207,6 +211,8 @@ class ZeroBERToTrainer(SetFitTrainer):
         num_epochs = num_epochs or self.num_epochs
         num_body_epochs = num_body_epochs or self.num_body_epochs or num_epochs
         train_first_shot = train_first_shot or self.train_first_shot
+
+
 
         min_cluster_size = max(int(( len(train_dataset) / (4) ) / self.cluster_permissiveness), 2 ) ### minimun cluster size should be > 1
         print(f"Min cluster size: {min_cluster_size}")
@@ -342,21 +348,20 @@ class ZeroBERToTrainer(SetFitTrainer):
             # Throws error
             raise RuntimeError("ZeroBERTo training requires a first shot model")
         
-        print("Clustering all classes.")
-        fs_clusters = self.data_selector(None, None, embeds,
-                                                                                labels=labels,
-                                                                                n=1,
-                                                                                selection_strategy='first_shot',
-                                                                                min_cluster_size=min_cluster_size)
+        # print("Clustering all classes.")
+        # fs_clusters = self.data_selector(None, None, embeds,
+        #                                                                         labels=labels,
+        #                                                                         n=1,
+        #                                                                         selection_strategy='first_shot',
+        #                                                                         min_cluster_size=min_cluster_size)
         
         ### growth_rate
-        num_setfit_iterations = num_setfit_iterations or len(fs_clusters.unique())
         print(num_setfit_iterations)
         samples_per_label_roadmap = [self.starting_n]
         for i in range(num_setfit_iterations-1):
             new_element = (samples_per_label_roadmap[-1]*self.growth_rate)
             samples_per_label_roadmap.append(new_element)
-        samples_per_label_roadmap = [int(el) for el in samples_per_label_roadmap[0:num_setfit_iterations] if el < (len(self.train_dataset) / len(self.model.first_shot_model.classes_list))]
+        samples_per_label_roadmap = [int(el) for el in samples_per_label_roadmap[0:num_setfit_iterations] if el <= self.maximum_n]
 
         num_setfit_iterations = len(samples_per_label_roadmap)
 
