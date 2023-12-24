@@ -16,7 +16,7 @@ import pickle
 
 from setfit import SetFitTrainer
 from setfit import logging
-from setfit.modeling import SupConLoss, sentence_pairs_generation, sentence_pairs_generation_multilabel
+from setfit.modeling import sentence_pairs_generation, sentence_pairs_generation_multilabel#, SupConLoss
 
 if TYPE_CHECKING:
     import optuna
@@ -236,7 +236,7 @@ class ZeroBERToTrainer(SetFitTrainer):
                     losses.BatchHardTripletLoss,
                     losses.BatchSemiHardTripletLoss,
                     losses.BatchHardSoftMarginTripletLoss,
-                    SupConLoss,
+                    # SupConLoss,
                 ]:
                     train_examples = [InputExample(texts=[text], label=label) for text, label in zip(x_train, y_train)]
                     train_data_sampler = SentenceLabelDataset(train_examples, samples_per_label=self.samples_per_label)
@@ -249,8 +249,8 @@ class ZeroBERToTrainer(SetFitTrainer):
                             model=self.model.model_body,
                             distance_metric=self.distance_metric,
                         )
-                    elif self.loss_class is SupConLoss:
-                        train_loss = self.loss_class(model=self.model.model_body)
+                    # elif self.loss_class is SupConLoss:
+                    #     train_loss = self.loss_class(model=self.model.model_body)
                     else:
                         train_loss = self.loss_class(
                             model=self.model.model_body,
